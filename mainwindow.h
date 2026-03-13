@@ -60,17 +60,18 @@ class SentinelTag {
     // TODO---
     SentinelTag(qint16 id, QString tk);
     //~SentinelTag();
-    QString displayValue();
-    QString displayName();
-    QString displayTk();
-    QString displayStatus();
-    bool    isEnabled();
+    QString displayValue() const;
+    QString displayName() const;
+    QString displayTk() const;
+    QString displayStatus() const;
+    QString displayDetails() const;
+    bool    isEnabled() const;
     // -------
 
-  private:
     qint16             id;
     QString            tk;
     QString            name;
+    QString            tagDetails;
     bool               enabled;
     SentinelTagAddress address;
     SentinelTagValue   value;
@@ -87,6 +88,7 @@ class SentinelLink {
     QString                  name;
     bool                     enable;
     int                      protocol;
+    QString                  protocolDetails;
     std::vector<SentinelTag> tags;
     size_t                   tag_count;
     QString                  last_poll_time;
@@ -103,9 +105,12 @@ class SentinelTableModel : public QAbstractTableModel {
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index,
                   int                role = Qt::DisplayRole) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+
+    void setTableData(SentinelLink *link);
 
   private:
-    std::unique_ptr<SentinelLink> link_data;
+    SentinelLink link_data;
 };
 
 class MainWindow : public QMainWindow {
@@ -117,18 +122,23 @@ class MainWindow : public QMainWindow {
 
     void    initRequest();
     void    parseServerData();
+    void    selectedLinkChanged();
+    void    updateView();
     bool    isError();
     QString errorString();
 
   private:
     Ui::MainWindow *ui;
     QLabel         *statusLabel;
+    QLineEdit      *linkDetails;
+    QLineEdit      *linkStatus;
     QPushButton    *downloadButton;
     QComboBox      *linksList;
     QTimer         *pollTimer;
     QTableView     *tableView;
     QWidget        *centralWidget;
 
+    int                                                      selectedLinkIndex;
     bool                                                     error;
     QString                                                  serverError;
     std::vector<SentinelLink>                                linksBuffer;
