@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #define N_CHANNELS 1000
+#define N_LINKS    5
 
 #include <QAbstractTableModel>
 #include <QCheckBox>

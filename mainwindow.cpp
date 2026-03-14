@@ -140,6 +140,10 @@ MainWindow::MainWindow(QWidget *parent)
     linksList->setFixedWidth(300);
     linksList->setDisabled(true);
 
+    for (size_t i = 0; i < N_LINKS; i++) {
+        linksList->addItem(QString("DISABLED LINK %1").arg(i));
+    }
+
     connect(linksList, &QComboBox::currentIndexChanged, this,
             &MainWindow::selectedLinkChanged);
     QFormLayout *formLayout = new QFormLayout;
@@ -253,8 +257,11 @@ void MainWindow::parseServerData() {
             QString nameValue = deviceLinkObject.value("name").toString();
             deviceLink.name   = nameValue;
 
-            linksList->setItemText(i,
-                                   QString("%1  %2").arg(tkValue, nameValue));
+            // Update the links Combobox.
+            // This is a workaround
+
+            this->linksList->setItemText(
+                i, QString("%1 %2").arg(tkValue, nameValue));
 
             if (!deviceLinkObject.value("enabled").isBool()) {
                 this->error = true;
@@ -560,18 +567,13 @@ void MainWindow::updateView() {
         this->tableView->setRowHeight(i, 7);
     }
 
-    if (this->linksList->count() == 0) {
-        for (size_t i = 0; i < arrayLen; i++) {
-            this->linksList->addItem(QString("%1    %2")
-                                         .arg(this->linksBuffer[i].tk)
-                                         .arg(this->linksBuffer[i].name));
-        }
-    }
+    /*
     for (size_t i = 0; i < arrayLen; i++) {
-        this->linksList->setItemText(i, QString("%1    %2")
-                                            .arg(this->linksBuffer[i].tk)
-                                            .arg(this->linksBuffer[i].name));
+        this->linksList->setItemText(
+            i, QString("%1 %2").arg(this->linksBuffer[i].tk,
+                                    this->linksBuffer[i].name));
     }
+        */
 
     this->linksList->setDisabled(false);
 }
