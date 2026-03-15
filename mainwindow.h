@@ -3,11 +3,17 @@
 
 #define N_CHANNELS 1000
 #define N_LINKS    5
+#define POLL_URL      "http://localhost:3000/api/get_links_config"
+#define WRITE_TAG_URL "http://localhost:3000/api/write_tag"
 
 #include <QAbstractTableModel>
+#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
+#include <QFileDialog>
 #include <QFormLayout>
+#include <QInputDialog>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -15,6 +21,9 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QTableView>
 #include <QTimer>
@@ -22,6 +31,7 @@
 #include <QVBoxLayout>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
+#include <limits>
 
 QT_BEGIN_NAMESPACE
 
@@ -101,6 +111,8 @@ class SentinelLink {
 class SentinelTableModel : public QAbstractTableModel {
     Q_OBJECT
   public:
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
     explicit SentinelTableModel(QObject *parent = nullptr);
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -122,6 +134,11 @@ class MainWindow : public QMainWindow {
     ~MainWindow();
 
     void    initRequest();
+    void    postWriteRequest(int linkId, int tagId, SentinelTagValue value);
+    void    writeTagFinished();
+    void    saveActionClicked();
+    void    aboutActionClicked();
+    void    tagRowClicked(const QModelIndex &index);
     void    parseServerData();
     void    selectedLinkChanged();
     void    updateView();
@@ -139,7 +156,12 @@ class MainWindow : public QMainWindow {
     QTimer         *pollTimer;
     QTableView     *tableView;
     QWidget        *centralWidget;
+    QMenuBar       *mainMenuBar;
+    QMenu          *fileMenu;
+    QMenu          *viewMenu;
+    QMenu          *helpMenu;
 
+    QString                                                  configData;
     int                                                      selectedLinkIndex;
     bool                                                     error;
     QString                                                  serverError;
@@ -149,5 +171,6 @@ class MainWindow : public QMainWindow {
     QUrl                                                     url;
     QNetworkAccessManager                                    qnam;
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
+    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
 };
 #endif // MAINWINDOW_H

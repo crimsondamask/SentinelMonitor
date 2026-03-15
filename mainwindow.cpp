@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 #include <QWidget>
 #include <QtNetwork/QtNetwork>
+#include <cfloat>
 
 SentinelTag::SentinelTag(qint16 id, QString tk) {
     this->id      = id;
@@ -85,6 +86,36 @@ void SentinelTableModel::setTableData(SentinelLink *link) {
 Qt::ItemFlags SentinelTableModel::flags(const QModelIndex &index) const {
     return QAbstractTableModel::flags(index) & ~Qt::ItemIsUserCheckable;
 }
+QVariant SentinelTableModel::headerData(int             section,
+                                        Qt::Orientation orientation,
+                                        int             role) const {
+    if (role != Qt::DisplayRole) {
+        return QVariant();
+    }
+
+    if (orientation == Qt::Horizontal) {
+        switch (section) {
+        case 0:
+            return QString("TK");
+        case 1:
+            return QString("NAME");
+        case 2:
+            return QString("VALUE");
+        case 3:
+            return QString("DETAILS");
+        case 4:
+            return QString("STATUS");
+        default:
+            break;
+        }
+    }
+
+    if (orientation == Qt::Vertical) {
+        return QString("%1").arg(section);
+    }
+    return QVariant();
+}
+
 QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
     for (size_t i = 0; i < N_CHANNELS; i++) {
         if (index.row() == i) {
@@ -120,15 +151,36 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
+    QLocale::setDefault(QLocale::c());
+    mainMenuBar    = this->menuBar();
+    this->fileMenu = this->mainMenuBar->addMenu(tr("&File"));
+
+    QAction *saveAction = new QAction(tr("&Save"), this);
+    QAction *exitAction = new QAction(tr("&Exit"), this);
+    exitAction->setShortcuts(QKeySequence::Quit);
+
+    fileMenu->addAction(saveAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(exitAction);
+
+    this->helpMenu       = this->mainMenuBar->addMenu(tr("&Help"));
+    QAction *aboutAction = new QAction(tr("&About"), this);
+    helpMenu->addAction(aboutAction);
+
+    connect(exitAction, &QAction::triggered, this, &QMainWindow::close);
+    connect(saveAction, &QAction::triggered, this,
+            &MainWindow::saveActionClicked);
+    connect(aboutAction, &QAction::triggered, this,
+            &MainWindow::aboutActionClicked);
+
     linkStatus->setReadOnly(true);
     linkStatus->setFixedWidth(300);
 
     linkDetails->setReadOnly(true);
     linkDetails->setFixedWidth(300);
-    url = QUrl::fromUserInput(
-        QString("http://localhost:3000/api/get_links_config").trimmed());
+    url = QUrl::fromUserInput(QString(POLL_URL).trimmed());
 
-    setWindowTitle("Sentinel Monitor V0.0.1");
+    setWindowTitle("Sentinel Monitor V1.0");
 
     connect(pollTimer, &QTimer::timeout, this, &MainWindow::initRequest);
 
@@ -157,6 +209,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     tableView->setModel(&model);
     tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    connect(tableView, &QTableView::doubleClicked, this,
+            &MainWindow::tagRowClicked);
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addLayout(formLayout);
@@ -168,6 +222,170 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow() { delete ui; }
 bool    MainWindow::isError() { return this->error; }
 QString MainWindow::errorString() { return this->serverError; }
+void    MainWindow::postWriteRequest(int linkId, int tagId,
+                                     SentinelTagValue value) {
+    QJsonObject tagWriteData{};
+    QJsonObject tagInfo = {};
+    QJsonObject tagValueData{};
+
+    tagInfo["link_id"]       = linkId;
+    tagInfo["tag_id"]        = tagId;
+    tagWriteData["tag_info"] = tagInfo;
+
+    switch (value.type) {
+    case ST_INT_VALUE:
+        tagValueData["Int"] = value.int_value;
+        break;
+    case ST_REAL_VALUE:
+        tagValueData["Real"] = value.real_value;
+        break;
+    case ST_BIT_VALUE:
+        tagValueData["Bit"] = value.bit_value;
+        break;
+    default:
+        break;
+    }
+
+    tagWriteData["tag_value"] = tagValueData;
+
+    QJsonDocument tagWriteJsonDoc = QJsonDocument(tagWriteData);
+
+    QByteArray      bytes       = tagWriteJsonDoc.toJson();
+    QUrl            writeUrl    = QUrl(QString(WRITE_TAG_URL));
+    QNetworkRequest postRequest = QNetworkRequest(writeUrl);
+    postRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                             QString("application/json"));
+    writeTagReply.reset(qnam.post(postRequest, bytes));
+
+    connect(this->writeTagReply.get(), &QNetworkReply::finished, this,
+               &MainWindow::writeTagFinished);
+}
+void MainWindow::writeTagFinished() {
+    if (this->writeTagReply->error() == QNetworkReply::NetworkError::NoError) {
+        int statusCode =
+            writeTagReply->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+                .toInt();
+        if (statusCode == 200) {
+            QMessageBox::information(this, "Success",
+                                     "Tag write was successfull.");
+        } else {
+            QMessageBox::critical(
+                this, "Server Error",
+                "The server could not write the tag successfully.");
+        }
+    } else {
+        QMessageBox::critical(this, "Write Error",
+                              "Could not write the tag successfully.");
+    }
+}
+void    MainWindow::tagRowClicked(const QModelIndex &index) {
+    if (!index.isValid()) {
+        return;
+    }
+    if (index.row() > N_CHANNELS) {
+        return;
+    }
+
+    int clickedRow = index.row();
+
+    if (this->linksBuffer.empty()) {
+        return;
+    }
+
+    SentinelTag selectedTag =
+        this->linksBuffer[this->selectedLinkIndex].tags[clickedRow];
+
+    bool             ok{};
+    int              intInput = 0;
+    float            realInput{};
+    int              bitInput{};
+    SentinelTagValue tagValue;
+
+    switch (selectedTag.value.type) {
+    case ST_INT_VALUE:
+        intInput = QInputDialog::getInt(
+            this,
+            QString("%1:%2 INT Input")
+                .arg(selectedTag.displayTk(), selectedTag.displayName()),
+            tr("Write INT Value:"), 0, INT_MIN, INT_MAX, 1, &ok);
+        if (ok) {
+            tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
+                                        .real_value = 0.0,
+                                        .int_value  = intInput,
+                                        .bit_value  = 0};
+        }
+        break;
+    case ST_REAL_VALUE:
+
+        realInput = QInputDialog::getDouble(
+            this,
+            QString("%1:%2 REAL Input")
+                .arg(selectedTag.displayTk(), selectedTag.displayName()),
+            tr("Write REAL Value:"), 0.0, FLT_MIN, FLT_MAX, 5, &ok);
+        if (ok) {
+            tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
+                                        .real_value = realInput,
+                                        .int_value  = 0,
+                                        .bit_value  = 0};
+            qDebug() << realInput;
+        }
+        break;
+    case ST_BIT_VALUE:
+        bitInput = QInputDialog::getInt(
+            this,
+            QString("%1:%2 Bit Input")
+                .arg(selectedTag.displayTk(), selectedTag.displayName()),
+            tr("Write BIT Value:"), 0, 0, 1, 1, &ok);
+        if (ok) {
+            tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
+                                        .real_value = 0.0,
+                                        .int_value  = 0,
+                                        .bit_value  = bitInput};
+            qDebug() << intInput;
+        }
+        break;
+    default:
+        break;
+    }
+    this->postWriteRequest(this->selectedLinkIndex, clickedRow, tagValue);
+}
+void MainWindow::aboutActionClicked() {
+    QMessageBox::information(
+        nullptr, "About", "Sentinel Monitor V1.0. 2026 by Abdelkader Madoui.");
+}
+void MainWindow::saveActionClicked() {
+    if (this->isError()) {
+        QMessageBox::information(
+            nullptr, "Save Error",
+            "There was an error while connecting to the server.");
+    } else {
+        QString fileName = QFileDialog::getSaveFileName(
+            this, tr("Save Config"), QDir::homePath(),
+            tr("Text Files (*.json);;All Files (*)"));
+
+        if (!fileName.isEmpty()) {
+            QSaveFile file(fileName);
+            if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                QTextStream out(&file);
+                out << this->configData;
+
+                if (file.commit()) {
+                    QMessageBox::information(
+                        this, tr("Success"),
+                        tr("Configuration file saved successfully."));
+                } else {
+                    QMessageBox::critical(this, tr("Error"),
+                                          tr("Could not save configuration to "
+                                             "the selected file."));
+                }
+            } else {
+
+                QMessageBox::critical(this, tr("Error"),
+                                      tr("Could not open file."));
+            }
+        }
+    }
+}
 void    MainWindow::selectedLinkChanged() {
     size_t arrayLen = linksBuffer.size();
 
@@ -533,6 +751,8 @@ void MainWindow::parseServerData() {
             return;
         }
 
+        // Save json data
+        this->configData = QString("%1").arg(readData.toStdString());
         // Parse successfull. We update the GUI.
         this->updateView();
     }
