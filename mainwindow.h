@@ -1,11 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#define N_CHANNELS 1000
-#define N_LINKS    5
-#define POLL_URL      "http://localhost:3000/api/get_links_config"
-#define WRITE_TAG_URL "http://localhost:3000/api/write_tag"
-
+#include "link.h"
 #include <QAbstractTableModel>
 #include <QAction>
 #include <QCheckBox>
@@ -40,90 +36,36 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
-enum SentinelProtocol {
-    ST_MODBUS_TCP,
-    ST_MODBUS_SERIAL,
-};
 
-enum TagAddressType {
-    ST_MODBUS_ADDRESS,
-};
-
-enum TagValueType {
-    ST_INT_VALUE,
-    ST_REAL_VALUE,
-    ST_BIT_VALUE,
-};
-struct SentinelTagAddress {
-    int type;
-    int modbus_register;
-};
-
-struct SentinelTagValue {
-    int   type;
-    float real_value;
-    int   int_value;
-    int   bit_value;
-};
-
-class SentinelTag {
-  public:
-    // TODO---
-    SentinelTag(qint16 id, QString tk);
-    //~SentinelTag();
-    QString displayValue() const;
-    QString displayName() const;
-    QString displayTk() const;
-    QString displayStatus() const;
-    QString displayDetails() const;
-    bool    isEnabled() const;
-    // -------
-
-    qint16             id;
-    QString            tk;
-    QString            name;
-    QString            tagDetails;
-    bool               enabled;
-    SentinelTagAddress address;
-    SentinelTagValue   value;
-    QString            status;
-};
-
-class SentinelLink {
-  public:
-    SentinelLink(qint16 id, QString tk);
-    //~SentinelLink();
-
-    qint16                   id;
-    QString                  tk;
-    QString                  name;
-    bool                     enable;
-    int                      protocol;
-    QString                  protocolDetails;
-    std::vector<SentinelTag> tags;
-    size_t                   tag_count;
-    QString                  last_poll_time;
-    QString                  status;
-
-  private:
-};
 
 class SentinelTableModel : public QAbstractTableModel {
     Q_OBJECT
   public:
     QVariant headerData(int section, Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const override;
+
+    // TableView reimplementations-----------
+
     explicit SentinelTableModel(QObject *parent = nullptr);
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+
     QVariant data(const QModelIndex &index,
                   int                role = Qt::DisplayRole) const override;
+
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 
-    void setTableData(SentinelLink *link);
+    //---------------------------------------
+
+    void setTableData(SentinelDeviceLink *link);
+    void setTableData(SentinelInputsLink *link);
 
   private:
-    SentinelLink link_data;
+    int                linkType;
+    SentinelDeviceLink deviceLinkData;
+    SentinelInputsLink inputsLinkData;
 };
 
 class MainWindow : public QMainWindow {
@@ -173,4 +115,5 @@ class MainWindow : public QMainWindow {
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
 };
+
 #endif // MAINWINDOW_H

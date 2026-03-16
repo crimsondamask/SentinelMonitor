@@ -1,72 +1,15 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "device_link.h"
+#include "link.h"
 #include <QWidget>
 #include <QtNetwork/QtNetwork>
 #include <cfloat>
 
-SentinelTag::SentinelTag(qint16 id, QString tk) {
-    this->id      = id;
-    this->tk      = QString("%1:%2").arg(tk).arg(id);
-    this->name    = QString("TAG_%1").arg(id);
-    this->enabled = false;
-    this->address = SentinelTagAddress{.type = 0, .modbus_register = 0};
-    this->value   = SentinelTagValue{
-          .type = 0, .real_value = 0.0, .int_value = 0, .bit_value = 0};
-    this->status = QString("Initialized.");
-}
-
-QString SentinelTag::displayName() const {
-    return QString("%1").arg(this->name);
-}
-
-QString SentinelTag::displayTk() const { return QString("%1").arg(this->tk); }
-
-QString SentinelTag::displayStatus() const {
-    return QString("%1").arg(this->status);
-}
-QString SentinelTag::displayDetails() const {
-    return QString("%1").arg(this->tagDetails);
-}
-
-bool SentinelTag::isEnabled() const { return this->enabled; }
-
-QString SentinelTag::displayValue() const {
-    switch (this->value.type) {
-    case ST_INT_VALUE:
-        return QString("%1").arg(this->value.int_value);
-        break;
-    case ST_REAL_VALUE:
-        return QString("%1").arg(this->value.real_value);
-        break;
-    case ST_BIT_VALUE:
-        return QString("%1").arg(this->value.bit_value);
-        break;
-
-    default:
-        return QString("%1").arg(this->value.int_value);
-        break;
-    }
-}
-
-SentinelLink::SentinelLink(qint16 id, QString tk) {
-    this->id       = id;
-    this->tk       = tk;
-    this->name     = QString("%1%2").arg(tk).arg(id);
-    this->enable   = true;
-    this->protocol = ST_MODBUS_TCP;
-    this->tags.reserve(N_CHANNELS);
-    for (size_t i = 0; i < N_CHANNELS; i++) {
-        SentinelTag tag = SentinelTag(i, tk);
-        this->tags.push_back(tag);
-    }
-    this->tag_count      = N_CHANNELS;
-    this->status         = QString("Link is disconnected");
-    this->last_poll_time = QString("N/A");
-}
-
 SentinelTableModel::SentinelTableModel(QObject *parent)
     : QAbstractTableModel(parent),
-      link_data(SentinelLink(0, QString("LINK1"))) {}
+      deviceLinkData(SentinelDeviceLink(0, QString("LINK1"))),
+      inputsLinkData(SentinelInputsLink(0, QString("INPUTS LINK"))) {}
 
 int SentinelTableModel::rowCount(const QModelIndex &parent) const {
     return N_CHANNELS;
@@ -76,8 +19,16 @@ int SentinelTableModel::columnCount(const QModelIndex &parent) const {
     return 5;
 }
 
-void SentinelTableModel::setTableData(SentinelLink *link) {
-    this->link_data         = *link;
+void SentinelTableModel::setTableData(SentinelDeviceLink *link) {
+    this->deviceLinkData    = *link;
+    this->linkType          = ST_DEVICE;
+    QModelIndex topLeft     = createIndex(0, 0);
+    QModelIndex bottomRight = createIndex(5, N_CHANNELS - 1);
+    emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
+}
+void SentinelTableModel::setTableData(SentinelInputsLink *link) {
+    this->inputsLinkData    = *link;
+    this->linkType          = ST_INPUTS;
     QModelIndex topLeft     = createIndex(0, 0);
     QModelIndex bottomRight = createIndex(5, N_CHANNELS - 1);
     emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
@@ -117,29 +68,69 @@ QVariant SentinelTableModel::headerData(int             section,
 }
 
 QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
-    for (size_t i = 0; i < N_CHANNELS; i++) {
-        if (index.row() == i) {
-            if (role == Qt::DisplayRole && index.column() == 0) {
-                return QString("%1").arg(link_data.tags[i].displayTk());
-            }
-            if (role == Qt::DisplayRole && index.column() == 1) {
-                return QString("%1").arg(link_data.tags[i].displayName());
-            }
-            if (role == Qt::DisplayRole && index.column() == 2) {
-                if (!link_data.tags[i].isEnabled()) {
-                    return QString("DISABLED");
-                } else {
-                    return QString("%1").arg(link_data.tags[i].displayValue());
+    switch (this->linkType) {
+    case ST_DEVICE:
+        for (size_t i = 0; i < N_CHANNELS; i++) {
+            if (index.row() == i) {
+                if (role == Qt::DisplayRole && index.column() == 0) {
+                    return QString("%1").arg(
+                        deviceLinkData.tags[i].displayTk());
+                }
+                if (role == Qt::DisplayRole && index.column() == 1) {
+                    return QString("%1").arg(
+                        deviceLinkData.tags[i].displayName());
+                }
+                if (role == Qt::DisplayRole && index.column() == 2) {
+                    if (!deviceLinkData.tags[i].isEnabled()) {
+                        return QString("DISABLED");
+                    } else {
+                        return QString("%1").arg(
+                            deviceLinkData.tags[i].displayValue());
+                    }
+                }
+                if (role == Qt::DisplayRole && index.column() == 3) {
+                    return QString("%1").arg(
+                        deviceLinkData.tags[i].displayDetails());
+                }
+                if (role == Qt::DisplayRole && index.column() == 4) {
+                    return QString("%1").arg(
+                        deviceLinkData.tags[i].displayStatus());
                 }
             }
-            if (role == Qt::DisplayRole && index.column() == 3) {
-                return QString("%1").arg(link_data.tags[i].displayDetails());
-            }
-            if (role == Qt::DisplayRole && index.column() == 4) {
-                return QString("%1").arg(link_data.tags[i].displayStatus());
+        }
+        break;
+    case ST_INPUTS:
+        for (size_t i = 0; i < N_CHANNELS; i++) {
+            if (index.row() == i) {
+                if (role == Qt::DisplayRole && index.column() == 0) {
+                    return QString("%1").arg(
+                        inputsLinkData.tags[i].displayTk());
+                }
+                if (role == Qt::DisplayRole && index.column() == 1) {
+                    return QString("%1").arg(
+                        inputsLinkData.tags[i].displayName());
+                }
+                if (role == Qt::DisplayRole && index.column() == 2) {
+                    if (!inputsLinkData.tags[i].isEnabled()) {
+                        return QString("DISABLED");
+                    } else {
+                        return QString("%1").arg(
+                            inputsLinkData.tags[i].displayValue());
+                    }
+                }
+                if (role == Qt::DisplayRole && index.column() == 3) {
+                    return QString("");
+                }
+                if (role == Qt::DisplayRole && index.column() == 4) {
+                    return QString("");
+                }
             }
         }
+        break;
+    default:
+        break;
     }
+
     return QVariant();
 }
 MainWindow::MainWindow(QWidget *parent)
@@ -147,7 +138,7 @@ MainWindow::MainWindow(QWidget *parent)
       statusLabel(new QLabel("Disconnected.")), downloadButton(new QPushButton),
       pollTimer(new QTimer(this)), centralWidget(new QWidget(this)),
       linkDetails(new QLineEdit("N/A")), linkStatus(new QLineEdit("N/A")),
-      tableView(new QTableView) {
+      tableView(new QTableView), selectedLinkIndex(0) {
 
     ui->setupUi(this);
 
@@ -211,6 +202,9 @@ MainWindow::MainWindow(QWidget *parent)
     tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     connect(tableView, &QTableView::doubleClicked, this,
             &MainWindow::tagRowClicked);
+    for (size_t i = 0; i < N_CHANNELS; i++) {
+        this->tableView->setRowHeight(i, 7);
+    }
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addLayout(formLayout);
@@ -260,6 +254,7 @@ void    MainWindow::postWriteRequest(int linkId, int tagId,
     connect(this->writeTagReply.get(), &QNetworkReply::finished, this,
                &MainWindow::writeTagFinished);
 }
+
 void MainWindow::writeTagFinished() {
     if (this->writeTagReply->error() == QNetworkReply::NetworkError::NoError) {
         int statusCode =
@@ -278,6 +273,7 @@ void MainWindow::writeTagFinished() {
                               "Could not write the tag successfully.");
     }
 }
+
 void    MainWindow::tagRowClicked(const QModelIndex &index) {
     if (!index.isValid()) {
         return;
@@ -285,15 +281,10 @@ void    MainWindow::tagRowClicked(const QModelIndex &index) {
     if (index.row() > N_CHANNELS) {
         return;
     }
-
     int clickedRow = index.row();
-
     if (this->linksBuffer.empty()) {
         return;
     }
-
-    SentinelTag selectedTag =
-        this->linksBuffer[this->selectedLinkIndex].tags[clickedRow];
 
     bool             ok{};
     int              intInput = 0;
@@ -301,58 +292,113 @@ void    MainWindow::tagRowClicked(const QModelIndex &index) {
     int              bitInput{};
     SentinelTagValue tagValue;
 
-    switch (selectedTag.value.type) {
-    case ST_INT_VALUE:
-        intInput = QInputDialog::getInt(
-            this,
-            QString("%1:%2 INT Input")
-                .arg(selectedTag.displayTk(), selectedTag.displayName()),
-            tr("Write INT Value:"), 0, INT_MIN, INT_MAX, 1, &ok);
-        if (ok) {
-            tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
-                                        .real_value = 0.0,
-                                        .int_value  = intInput,
-                                        .bit_value  = 0};
-        }
-        break;
-    case ST_REAL_VALUE:
+    if (this->linksBuffer[selectedLinkIndex].type == ST_DEVICE) {
+        SentinelDeviceTag selectedTag =
+            this->linksBuffer[selectedLinkIndex].deviceLink.tags[clickedRow];
+        switch (selectedTag.value.type) {
+        case ST_INT_VALUE:
+            intInput = QInputDialog::getInt(
+                this,
+                QString("%1:%2 INT Input")
+                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
+                tr("Write INT Value:"), 0, INT_MIN, INT_MAX, 1, &ok);
+            if (ok) {
+                tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
+                                            .real_value = 0.0,
+                                            .int_value  = intInput,
+                                            .bit_value  = 0};
+            }
+            break;
+        case ST_REAL_VALUE:
 
-        realInput = QInputDialog::getDouble(
-            this,
-            QString("%1:%2 REAL Input")
-                .arg(selectedTag.displayTk(), selectedTag.displayName()),
-            tr("Write REAL Value:"), 0.0, FLT_MIN, FLT_MAX, 5, &ok);
-        if (ok) {
-            tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
-                                        .real_value = realInput,
-                                        .int_value  = 0,
-                                        .bit_value  = 0};
-            qDebug() << realInput;
+            realInput = QInputDialog::getDouble(
+                this,
+                QString("%1:%2 REAL Input")
+                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
+                tr("Write REAL Value:"), 0.0, FLT_MIN, FLT_MAX, 5, &ok);
+            if (ok) {
+                tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
+                                            .real_value = realInput,
+                                            .int_value  = 0,
+                                            .bit_value  = 0};
+            }
+            break;
+        case ST_BIT_VALUE:
+            bitInput = QInputDialog::getInt(
+                this,
+                QString("%1:%2 Bit Input")
+                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
+                tr("Write BIT Value:"), 0, 0, 1, 1, &ok);
+            if (ok) {
+                tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
+                                            .real_value = 0.0,
+                                            .int_value  = 0,
+                                            .bit_value  = bitInput};
+            }
+            break;
+        default:
+            break;
         }
-        break;
-    case ST_BIT_VALUE:
-        bitInput = QInputDialog::getInt(
-            this,
-            QString("%1:%2 Bit Input")
-                .arg(selectedTag.displayTk(), selectedTag.displayName()),
-            tr("Write BIT Value:"), 0, 0, 1, 1, &ok);
-        if (ok) {
-            tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
-                                        .real_value = 0.0,
-                                        .int_value  = 0,
-                                        .bit_value  = bitInput};
-            qDebug() << intInput;
+    } else if (this->linksBuffer[selectedLinkIndex].type == ST_INPUTS) {
+        SentinelInputsTag selectedTag =
+            this->linksBuffer[selectedLinkIndex].inputsLink.tags[clickedRow];
+        switch (selectedTag.value.type) {
+        case ST_INT_VALUE:
+            intInput = QInputDialog::getInt(
+                this,
+                QString("%1:%2 INT Input")
+                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
+                tr("Write INT Value:"), 0, INT_MIN, INT_MAX, 1, &ok);
+            if (ok) {
+                tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
+                                            .real_value = 0.0,
+                                            .int_value  = intInput,
+                                            .bit_value  = 0};
+            }
+            break;
+        case ST_REAL_VALUE:
+
+            realInput = QInputDialog::getDouble(
+                this,
+                QString("%1:%2 REAL Input")
+                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
+                tr("Write REAL Value:"), 0.0, FLT_MIN, FLT_MAX, 5, &ok);
+            if (ok) {
+                tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
+                                            .real_value = realInput,
+                                            .int_value  = 0,
+                                            .bit_value  = 0};
+            }
+            break;
+        case ST_BIT_VALUE:
+            bitInput = QInputDialog::getInt(
+                this,
+                QString("%1:%2 Bit Input")
+                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
+                tr("Write BIT Value:"), 0, 0, 1, 1, &ok);
+            if (ok) {
+                tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
+                                            .real_value = 0.0,
+                                            .int_value  = 0,
+                                            .bit_value  = bitInput};
+            }
+            break;
+        default:
+            break;
         }
-        break;
-    default:
-        break;
+    } else {
+        QMessageBox::information(nullptr, "Unimplemented Link",
+                                 "Selected link doesn't accept writing.");
+        return;
     }
+
     this->postWriteRequest(this->selectedLinkIndex, clickedRow, tagValue);
 }
 void MainWindow::aboutActionClicked() {
     QMessageBox::information(
         nullptr, "About", "Sentinel Monitor V1.0. 2026 by Abdelkader Madoui.");
 }
+
 void MainWindow::saveActionClicked() {
     if (this->isError()) {
         QMessageBox::information(
@@ -386,6 +432,7 @@ void MainWindow::saveActionClicked() {
         }
     }
 }
+
 void    MainWindow::selectedLinkChanged() {
     size_t arrayLen = linksBuffer.size();
 
@@ -463,7 +510,8 @@ void MainWindow::parseServerData() {
 
             QString tkValue = deviceLinkObject.value("tk").toString();
 
-            SentinelLink deviceLink = SentinelLink(idValue, tkValue);
+            SentinelDeviceLink deviceLink =
+                SentinelDeviceLink(idValue, tkValue);
 
             if (!deviceLinkObject.value("name").isString()) {
                 this->error       = true;
@@ -739,10 +787,148 @@ void MainWindow::parseServerData() {
                 return;
             }
 
-            this->linksBuffer.push_back(deviceLink);
+            SentinelLink link = SentinelLink(deviceLink);
+
+            this->linksBuffer.push_back(link);
             this->error       = false;
             this->serverError = QString("Parse successful.");
             this->statusLabel->setText(this->serverError);
+        } else if (value.toObject().value("Inputs").isObject()) {
+            QJsonObject inputLinkObject =
+                value.toObject().value("Inputs").toObject();
+
+            int idValue = inputLinkObject.value("id").toInt();
+            if (!inputLinkObject.value("tk").isString()) {
+                this->error       = true;
+                this->serverError = QString("Could not parse link tk value.");
+                this->statusLabel->setText(this->serverError);
+                return;
+            }
+
+            QString tkValue = inputLinkObject.value("tk").toString();
+
+            SentinelInputsLink inputLink = SentinelInputsLink(idValue, tkValue);
+
+            if (!inputLinkObject.value("name").isString()) {
+                this->error       = true;
+                this->serverError = QString("Could not parse link name value.");
+                this->statusLabel->setText(this->serverError);
+                return;
+            }
+
+            QString nameValue = inputLinkObject.value("name").toString();
+            inputLink.name    = nameValue;
+
+            // Update the links Combobox.
+            // This is a workaround
+
+            this->linksList->setItemText(
+                i, QString("%1 %2").arg(tkValue, nameValue));
+
+            if (!inputLinkObject.value("tags").isArray()) {
+                this->error       = true;
+                this->serverError = QString("Could not parse tags array.");
+                this->statusLabel->setText(this->serverError);
+                return;
+            }
+
+            QJsonArray tagsArray = inputLinkObject.value("tags").toArray();
+
+            if (tagsArray.count() != N_CHANNELS) {
+                this->error       = true;
+                this->serverError = QString(
+                    "Server tags count doesn't equal monitor tags count.");
+                this->statusLabel->setText(this->serverError);
+                return;
+            }
+
+            for (size_t tag_index = 0; tag_index < N_CHANNELS; tag_index++) {
+                // TODO
+                // Parse the tags.
+                QJsonObject tagObject = tagsArray[tag_index].toObject();
+
+                if (!tagObject.value("tk").isString()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("tag %1 tk parse failed.").arg(tag_index);
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                QString tagTk                = tagObject.value("tk").toString();
+                inputLink.tags[tag_index].tk = tagTk;
+
+                if (!tagObject.value("name").isString()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("tag %1 name parse failed.").arg(tag_index);
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                QString tagName = tagObject.value("name").toString();
+                inputLink.tags[tag_index].name = tagName;
+
+                if (!tagObject.value("enabled").isBool()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("tag %1 enabled parse failed.").arg(tag_index);
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                bool tagEnabled = tagObject.value("enabled").toBool();
+                inputLink.tags[tag_index].enabled = tagEnabled;
+
+
+                if (!tagObject.value("value").isObject()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("tag %1 value object parse failed.")
+                            .arg(tag_index);
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                QJsonObject tagValueObject =
+                    tagObject.value("value").toObject();
+
+                if (tagValueObject.value("Real").isDouble()) {
+
+                    float tagRealValue =
+                        tagValueObject.value("Real").toDouble();
+                    inputLink.tags[tag_index].value.type       = ST_REAL_VALUE;
+                    inputLink.tags[tag_index].value.real_value = tagRealValue;
+
+                } else if (tagValueObject.value("Int").isDouble()) {
+
+                    int tagIntValue = tagValueObject.value("Int").toInt();
+                    inputLink.tags[tag_index].value.type      = ST_INT_VALUE;
+                    inputLink.tags[tag_index].value.int_value = tagIntValue;
+
+                } else if (tagValueObject.value("Bit").isDouble()) {
+
+                    int tagBitValue = tagValueObject.value("Bit").toInt();
+                    inputLink.tags[tag_index].value.type      = ST_BIT_VALUE;
+                    inputLink.tags[tag_index].value.bit_value = tagBitValue;
+
+                } else {
+                    this->error = true;
+                    this->serverError =
+                        QString("tag %1 value type parse failed.")
+                            .arg(tag_index);
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+            }
+
+            SentinelLink link = SentinelLink(inputLink);
+
+            this->linksBuffer.push_back(link);
+            this->error       = false;
+            this->serverError = QString("Parse successful.");
+            this->statusLabel->setText(this->serverError);
+
         } else {
             this->error = true;
             this->serverError =
@@ -766,6 +952,8 @@ void MainWindow::updateView() {
         this->serverError = QString(
             "Selected link index is outside the bounds of the links list.");
         this->statusLabel->setText(this->serverError);
+        qDebug() << selectedLinkIndex;
+
         return;
     }
     // Edge case where vector is empty (size 0) and index is 0
@@ -776,24 +964,34 @@ void MainWindow::updateView() {
         return;
     }
 
-    SentinelLink selectedLink = this->linksBuffer[this->selectedLinkIndex];
-    this->linkDetails->setText(QString("%1:%2:%3")
-                                   .arg(selectedLink.tk, selectedLink.name,
-                                        selectedLink.protocolDetails));
-    this->linkStatus->setText(selectedLink.status);
-    this->model.setTableData(&selectedLink);
-    this->tableView->setDisabled(false);
-    for (size_t i = 0; i < N_CHANNELS; i++) {
-        this->tableView->setRowHeight(i, 7);
-    }
+    SentinelLink &selectedLink = this->linksBuffer[this->selectedLinkIndex];
 
-    /*
-    for (size_t i = 0; i < arrayLen; i++) {
-        this->linksList->setItemText(
-            i, QString("%1 %2").arg(this->linksBuffer[i].tk,
-                                    this->linksBuffer[i].name));
+    SentinelDeviceLink &selectedDeviceLink = selectedLink.deviceLink;
+    SentinelInputsLink &selectedInputsLink = selectedLink.inputsLink;
+    switch (selectedLink.type) {
+    case ST_DEVICE:
+        this->linkDetails->setText(
+            QString("%1:%2:%3")
+                .arg(selectedDeviceLink.tk, selectedDeviceLink.name,
+                     selectedDeviceLink.protocolDetails));
+        this->linkStatus->setDisabled(false);
+        this->linkStatus->setText(selectedDeviceLink.status);
+        this->model.setTableData(&selectedDeviceLink);
+        this->tableView->setDisabled(false);
+        this->linksList->setDisabled(false);
+        break;
+    case ST_INPUTS:
+        this->linkDetails->setText(QString("%1:%2").arg(
+            selectedInputsLink.tk, selectedInputsLink.name));
+        this->linkStatus->setDisabled(true);
+        this->linkStatus->setText("INPUTS");
+        this->model.setTableData(&selectedInputsLink);
+        this->tableView->setDisabled(false);
+        this->linksList->setDisabled(false);
+        break;
+    default:
+        this->tableView->setDisabled(true);
+        this->linksList->setDisabled(true);
+        break;
     }
-        */
-
-    this->linksList->setDisabled(false);
 }

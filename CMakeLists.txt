@@ -26,6 +26,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(SentinelMonitor
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        link.h link.cpp
+        device_link.h device_link.cpp
+        config.h
+        inputs_link.h inputs_link.cpp
 
     )
 # Define target properties for Android with Qt 6 as:
