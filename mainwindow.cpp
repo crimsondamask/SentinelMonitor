@@ -281,10 +281,13 @@ void    MainWindow::tagRowClicked(const QModelIndex &index) {
     if (index.row() > N_CHANNELS) {
         return;
     }
-    int clickedRow = index.row();
+
     if (this->linksBuffer.empty()) {
         return;
     }
+
+    int clickedRow    = index.row();
+    int clickedColumn = index.column();
 
     bool             ok{};
     int              intInput = 0;
@@ -295,96 +298,119 @@ void    MainWindow::tagRowClicked(const QModelIndex &index) {
     if (this->linksBuffer[selectedLinkIndex].type == ST_DEVICE) {
         SentinelDeviceTag selectedTag =
             this->linksBuffer[selectedLinkIndex].deviceLink.tags[clickedRow];
-        switch (selectedTag.value.type) {
-        case ST_INT_VALUE:
-            intInput = QInputDialog::getInt(
-                this,
-                QString("%1:%2 INT Input")
-                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
-                tr("Write INT Value:"), 0, INT_MIN, INT_MAX, 1, &ok);
-            if (ok) {
-                tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
-                                            .real_value = 0.0,
-                                            .int_value  = intInput,
-                                            .bit_value  = 0};
-            }
-            break;
-        case ST_REAL_VALUE:
 
-            realInput = QInputDialog::getDouble(
-                this,
-                QString("%1:%2 REAL Input")
-                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
-                tr("Write REAL Value:"), 0.0, FLT_MIN, FLT_MAX, 5, &ok);
-            if (ok) {
-                tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
-                                            .real_value = realInput,
-                                            .int_value  = 0,
-                                            .bit_value  = 0};
+        if (clickedColumn == 2) {
+            switch (selectedTag.value.type) {
+            case ST_INT_VALUE:
+                intInput = QInputDialog::getInt(
+                    this,
+                    QString("%1:%2 INT Input")
+                        .arg(selectedTag.displayTk(),
+                             selectedTag.displayName()),
+                    tr("Write INT Value:"), selectedTag.value.int_value,
+                    INT_MIN, INT_MAX, 1, &ok);
+                if (ok) {
+                    tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
+                                                .real_value = 0.0,
+                                                .int_value  = intInput,
+                                                .bit_value  = 0};
+                }
+                break;
+            case ST_REAL_VALUE:
+
+                realInput = QInputDialog::getDouble(
+                    this,
+                    QString("%1:%2 REAL Input")
+                        .arg(selectedTag.displayTk(),
+                             selectedTag.displayName()),
+                    tr("Write REAL Value:"), selectedTag.value.real_value,
+                    FLT_MIN, FLT_MAX, 5, &ok);
+                if (ok) {
+                    tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
+                                                .real_value = realInput,
+                                                .int_value  = 0,
+                                                .bit_value  = 0};
+                }
+                break;
+            case ST_BIT_VALUE:
+                bitInput = QInputDialog::getInt(
+                    this,
+                    QString("%1:%2 Bit Input")
+                        .arg(selectedTag.displayTk(),
+                             selectedTag.displayName()),
+                    tr("Write BIT Value:"), selectedTag.value.bit_value, 0, 1,
+                    1, &ok);
+                if (ok) {
+                    tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
+                                                .real_value = 0.0,
+                                                .int_value  = 0,
+                                                .bit_value  = bitInput};
+                }
+                break;
+            default:
+                break;
             }
-            break;
-        case ST_BIT_VALUE:
-            bitInput = QInputDialog::getInt(
-                this,
-                QString("%1:%2 Bit Input")
-                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
-                tr("Write BIT Value:"), 0, 0, 1, 1, &ok);
-            if (ok) {
-                tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
-                                            .real_value = 0.0,
-                                            .int_value  = 0,
-                                            .bit_value  = bitInput};
-            }
-            break;
-        default:
-            break;
+        } else {
+            return;
         }
+
     } else if (this->linksBuffer[selectedLinkIndex].type == ST_INPUTS) {
         SentinelInputsTag selectedTag =
             this->linksBuffer[selectedLinkIndex].inputsLink.tags[clickedRow];
-        switch (selectedTag.value.type) {
-        case ST_INT_VALUE:
-            intInput = QInputDialog::getInt(
-                this,
-                QString("%1:%2 INT Input")
-                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
-                tr("Write INT Value:"), 0, INT_MIN, INT_MAX, 1, &ok);
-            if (ok) {
-                tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
-                                            .real_value = 0.0,
-                                            .int_value  = intInput,
-                                            .bit_value  = 0};
-            }
-            break;
-        case ST_REAL_VALUE:
 
-            realInput = QInputDialog::getDouble(
-                this,
-                QString("%1:%2 REAL Input")
-                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
-                tr("Write REAL Value:"), 0.0, FLT_MIN, FLT_MAX, 5, &ok);
-            if (ok) {
-                tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
-                                            .real_value = realInput,
-                                            .int_value  = 0,
-                                            .bit_value  = 0};
+        if (clickedColumn == 2) {
+            switch (selectedTag.value.type) {
+            case ST_INT_VALUE:
+                intInput = QInputDialog::getInt(
+                    this,
+                    QString("%1:%2 INT Input")
+                        .arg(selectedTag.displayTk(),
+                             selectedTag.displayName()),
+                    tr("Write INT Value:"), selectedTag.value.int_value,
+                    INT_MIN, INT_MAX, 1, &ok);
+                if (ok) {
+                    tagValue = SentinelTagValue{.type       = ST_INT_VALUE,
+                                                .real_value = 0.0,
+                                                .int_value  = intInput,
+                                                .bit_value  = 0};
+                }
+                break;
+            case ST_REAL_VALUE:
+
+                realInput = QInputDialog::getDouble(
+                    this,
+                    QString("%1:%2 REAL Input")
+                        .arg(selectedTag.displayTk(),
+                             selectedTag.displayName()),
+                    tr("Write REAL Value:"), selectedTag.value.real_value,
+                    FLT_MIN, FLT_MAX, 5, &ok);
+                if (ok) {
+                    tagValue = SentinelTagValue{.type       = ST_REAL_VALUE,
+                                                .real_value = realInput,
+                                                .int_value  = 0,
+                                                .bit_value  = 0};
+                }
+                break;
+            case ST_BIT_VALUE:
+                bitInput = QInputDialog::getInt(
+                    this,
+                    QString("%1:%2 Bit Input")
+                        .arg(selectedTag.displayTk(),
+                             selectedTag.displayName()),
+                    tr("Write BIT Value:"), selectedTag.value.bit_value, 0, 1,
+                    1, &ok);
+                if (ok) {
+                    tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
+                                                .real_value = 0.0,
+                                                .int_value  = 0,
+                                                .bit_value  = bitInput};
+                }
+                break;
+            default:
+                break;
             }
-            break;
-        case ST_BIT_VALUE:
-            bitInput = QInputDialog::getInt(
-                this,
-                QString("%1:%2 Bit Input")
-                    .arg(selectedTag.displayTk(), selectedTag.displayName()),
-                tr("Write BIT Value:"), 0, 0, 1, 1, &ok);
-            if (ok) {
-                tagValue = SentinelTagValue{.type       = ST_BIT_VALUE,
-                                            .real_value = 0.0,
-                                            .int_value  = 0,
-                                            .bit_value  = bitInput};
-            }
-            break;
-        default:
-            break;
+        } else {
+            return;
         }
     } else {
         QMessageBox::information(nullptr, "Unimplemented Link",
@@ -780,6 +806,58 @@ void MainWindow::parseServerData() {
                 int portValue = modbusTcpObject.value("port").toInt();
                 deviceLink.protocolDetails =
                     QString("ModbusTcp:%1:%2").arg(ipValue).arg(portValue);
+
+                SentinelModbusTcp modbusTcpConfig =
+                    SentinelModbusTcp(ipValue, portValue);
+
+                deviceLink.setConfig(modbusTcpConfig);
+            } else if (protocolObject.value("ModbusSerial").isObject()) {
+
+                QJsonObject modbusSerialObject =
+                    protocolObject.value("ModbusSerial").toObject();
+
+                if (!modbusSerialObject.value("ip").isString()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("Could not parse ModbusSerial com port value.");
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                QString comPortValue =
+                    modbusSerialObject.value("com_port").toString();
+
+                if (!modbusSerialObject.value("baudrate").isDouble()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("Could not parse ModbusSerial baudrate value.");
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                int baudrateValue =
+                    modbusSerialObject.value("baudrate").toInt();
+
+                if (!modbusSerialObject.value("slave").isDouble()) {
+                    this->error = true;
+                    this->serverError =
+                        QString("Could not parse ModbusSerial slave value.");
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                int slaveValue = modbusSerialObject.value("slave").toInt();
+                SentinelModbusSerial modbusSerialConfig = SentinelModbusSerial(
+                    comPortValue, baudrateValue, slaveValue);
+
+                deviceLink.protocolDetails =
+                    QString("ModbusSerial:%1:Baudrate(%2):Slave(%3)")
+                        .arg(comPortValue)
+                        .arg(baudrateValue)
+                        .arg(slaveValue);
+
+                deviceLink.setConfig(modbusSerialConfig);
+
             } else {
                 this->error       = true;
                 this->serverError = QString("Could not parse ModbusTcp value.");

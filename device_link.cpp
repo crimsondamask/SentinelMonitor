@@ -46,7 +46,10 @@ QString SentinelDeviceTag::displayValue() const {
     }
 }
 
-SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk) {
+SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk,
+                                       SentinelConfig config)
+    : config(config) {
+
     this->id       = id;
     this->tk       = tk;
     this->name     = QString("%1%2").arg(tk).arg(id);
@@ -61,3 +64,45 @@ SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk) {
     this->status         = QString("Link is disconnected");
     this->last_poll_time = QString("N/A");
 }
+
+SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk)
+    : config(SentinelModbusTcp("192.168.0.1", 502)) {
+
+    this->id       = id;
+    this->tk       = tk;
+    this->name     = QString("%1%2").arg(tk).arg(id);
+    this->enable   = true;
+    this->protocol = ST_MODBUS_TCP;
+    this->tags.reserve(N_CHANNELS);
+    for (size_t i = 0; i < N_CHANNELS; i++) {
+        SentinelDeviceTag tag = SentinelDeviceTag(i, tk);
+        this->tags.push_back(tag);
+    }
+    this->tag_count      = N_CHANNELS;
+    this->status         = QString("Link is disconnected");
+    this->last_poll_time = QString("N/A");
+}
+
+void SentinelDeviceLink::setConfig(SentinelModbusTcp config) {
+    this->config.modbusTcp = config;
+    this->config.protocol  = ST_MODBUS_TCP;
+}
+void SentinelDeviceLink::setConfig(SentinelModbusSerial config) {
+    this->config.modbusSerial = config;
+    this->config.protocol     = ST_MODBUS_SERIAL;
+}
+
+SentinelConfig::SentinelConfig(SentinelModbusTcp config)
+    : modbusTcp(config), modbusSerial("COM1", 9600, 1) {}
+SentinelConfig::SentinelConfig(SentinelModbusSerial config)
+    : modbusTcp("192.168.0.1", 502), modbusSerial(config) {}
+
+SentinelModbusTcp::SentinelModbusTcp(QString ip, int port)
+    : ip(ip), port(port) {}
+
+SentinelModbusSerial::SentinelModbusSerial(QString comPort, int baudrate,
+                                           int slave, int parity)
+    : comPort(comPort), baudrate(baudrate), slave(slave), parity(parity) {}
+SentinelModbusSerial::SentinelModbusSerial(QString comPort, int baudrate,
+                                           int slave)
+    : comPort(comPort), baudrate(baudrate) {}

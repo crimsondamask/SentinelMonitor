@@ -37,9 +37,43 @@ enum SentinelProtocol {
 enum TagAddressType {
     ST_MODBUS_ADDRESS,
 };
+
+enum SentinelBaudrate {
+    ST_BAUD_9600  = 9600,
+    ST_BAUD_38400 = 38400,
+};
+
 struct SentinelTagAddress {
     int type;
     int modbusRegister;
+};
+
+class SentinelModbusSerial {
+  public:
+    SentinelModbusSerial(QString comPort, int baudrate, int slave, int parity);
+    SentinelModbusSerial(QString comPort, int baudrate, int slave);
+
+    QString comPort;
+    int     baudrate;
+    int     parity;
+    int     slave;
+};
+class SentinelModbusTcp {
+  public:
+    SentinelModbusTcp(QString ip, int port);
+
+    QString ip;
+    int     port;
+};
+
+class SentinelConfig {
+  public:
+    SentinelConfig(SentinelModbusSerial config);
+    SentinelConfig(SentinelModbusTcp config);
+
+    int                  protocol;
+    SentinelModbusTcp    modbusTcp;
+    SentinelModbusSerial modbusSerial;
 };
 
 class SentinelDeviceTag {
@@ -68,6 +102,9 @@ class SentinelDeviceTag {
 class SentinelDeviceLink {
   public:
     SentinelDeviceLink(qint16 id, QString tk);
+    SentinelDeviceLink(qint16 id, QString tk, SentinelConfig config);
+    void setConfig(SentinelModbusTcp config);
+    void setConfig(SentinelModbusSerial config);
     //~SentinelDeviceLink();
 
     qint16                         id;
@@ -75,6 +112,7 @@ class SentinelDeviceLink {
     QString                        name;
     bool                           enable;
     int                            protocol;
+    SentinelConfig                 config;
     QString                        protocolDetails;
     std::vector<SentinelDeviceTag> tags;
     size_t                         tag_count;
