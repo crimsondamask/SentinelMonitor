@@ -5,7 +5,7 @@ SentinelDeviceTag::SentinelDeviceTag(qint16 id, QString tk) {
     this->tk      = QString("%1:%2").arg(tk).arg(id);
     this->name    = QString("TAG_%1").arg(id);
     this->enabled = false;
-    this->address = SentinelTagAddress{.type = 0, .modbus_register = 0};
+    this->address = SentinelTagAddress{.type = 0, .modbusRegister = 0};
     this->value   = SentinelTagValue{
           .type = 0, .real_value = 0.0, .int_value = 0, .bit_value = 0};
     this->status = QString("Initialized.");

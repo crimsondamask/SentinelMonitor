@@ -39,7 +39,7 @@ enum TagAddressType {
 };
 struct SentinelTagAddress {
     int type;
-    int modbus_register;
+    int modbusRegister;
 };
 
 class SentinelDeviceTag {

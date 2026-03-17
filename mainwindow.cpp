@@ -621,7 +621,7 @@ void MainWindow::parseServerData() {
                         modbusAddrObject.value("Holding").toInt();
 
                     deviceLink.tags[tag_index].address.type = ST_MODBUS_ADDRESS;
-                    deviceLink.tags[tag_index].address.modbus_register =
+                    deviceLink.tags[tag_index].address.modbusRegister =
                         holdingRegister;
                     deviceLink.tags[tag_index].tagDetails =
                         QString("%1,%2,Modbus,Holding=%3")
