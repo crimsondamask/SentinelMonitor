@@ -1,7 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "link.h"
 #include <QAbstractTableModel>
 #include <QAction>
 #include <QCheckBox>
@@ -29,6 +28,8 @@
 #include <QtNetwork/QNetworkReply>
 #include <limits>
 
+#include "link.h"
+
 QT_BEGIN_NAMESPACE
 
 namespace Ui {
@@ -36,13 +37,10 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
-
-
 class SentinelTableModel : public QAbstractTableModel {
     Q_OBJECT
-  public:
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const override;
+   public:
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     // TableView reimplementations-----------
 
@@ -52,8 +50,7 @@ class SentinelTableModel : public QAbstractTableModel {
 
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    QVariant data(const QModelIndex &index,
-                  int                role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 
@@ -62,7 +59,7 @@ class SentinelTableModel : public QAbstractTableModel {
     void setTableData(SentinelDeviceLink *link);
     void setTableData(SentinelInputsLink *link);
 
-  private:
+   private:
     int                linkType;
     SentinelDeviceLink deviceLinkData;
     SentinelInputsLink inputsLinkData;
@@ -71,24 +68,28 @@ class SentinelTableModel : public QAbstractTableModel {
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
-  public:
+   public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    void    initRequest();
-    void    postWriteRequest(int linkId, int tagId, SentinelTagValue value);
-    void    writeTagFinished();
-    void    saveActionClicked();
-    void    aboutActionClicked();
-    void    tagRowClicked(const QModelIndex &index);
-    void    parseServerData();
-    void    selectedLinkChanged();
-    void    updateView();
-    void    httpErrorOccurred();
-    bool    isError();
-    QString errorString();
+    void       initRequest();
+    void       postWriteRequest(int linkId, int tagId, SentinelTagValue value);
+    void       postTagConfigRequest(int linkId, QByteArray data);
+    void       writeTagFinished();
+    void       reconfigTagFinished();
+    void       saveActionClicked();
+    void       aboutActionClicked();
+    void       tagRowClicked(const QModelIndex &index);
+    void       parseServerData();
+    void       selectedLinkChanged();
+    void       updateView();
+    void       httpErrorOccurred();
+    bool       isError();
+    QString    errorString();
+    QByteArray tagReconfigJson(SentinelDeviceTag tag);
+    QByteArray jsonFromTag(SentinelInputsTag tag);
 
-  private:
+   private:
     Ui::MainWindow *ui;
     QLabel         *statusLabel;
     QLineEdit      *linkDetails;
@@ -114,6 +115,7 @@ class MainWindow : public QMainWindow {
     QNetworkAccessManager                                    qnam;
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
+    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigTagReply;
 };
 
-#endif // MAINWINDOW_H
+#endif  // MAINWINDOW_H

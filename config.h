@@ -5,6 +5,7 @@
 #define N_LINKS       5
 #define POLL_URL      "http://localhost:3000/api/get_links_config"
 #define WRITE_TAG_URL "http://localhost:3000/api/write_tag"
+#define RECONFIG_TAG_URL "http://localhost:3000/api/reconfigure_device_tag"
 
 enum TagValueType {
     ST_INT_VALUE,

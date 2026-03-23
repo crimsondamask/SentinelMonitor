@@ -12,7 +12,7 @@ enum SentinelLinkType {
 };
 
 class SentinelLink {
-  public:
+   public:
     SentinelLink(SentinelDeviceLink link);
     SentinelLink(SentinelInputsLink link);
     SentinelLink(const SentinelLink &other);
@@ -23,4 +23,4 @@ class SentinelLink {
     SentinelInputsLink inputsLink;
 };
 
-#endif // LINK_H
+#endif  // LINK_H

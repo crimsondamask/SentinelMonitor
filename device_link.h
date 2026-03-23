@@ -1,8 +1,6 @@
 #ifndef DEVICE_LINK_H
 #define DEVICE_LINK_H
 
-#include "config.h"
-
 #include <QAbstractTableModel>
 #include <QAction>
 #include <QCheckBox>
@@ -29,6 +27,8 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
 
+#include "config.h"
+
 enum SentinelProtocol {
     ST_MODBUS_TCP,
     ST_MODBUS_SERIAL,
@@ -49,7 +49,7 @@ struct SentinelTagAddress {
 };
 
 class SentinelModbusSerial {
-  public:
+   public:
     SentinelModbusSerial(QString comPort, int baudrate, int slave, int parity);
     SentinelModbusSerial(QString comPort, int baudrate, int slave);
 
@@ -59,7 +59,7 @@ class SentinelModbusSerial {
     int     slave;
 };
 class SentinelModbusTcp {
-  public:
+   public:
     SentinelModbusTcp(QString ip, int port);
 
     QString ip;
@@ -67,7 +67,7 @@ class SentinelModbusTcp {
 };
 
 class SentinelConfig {
-  public:
+   public:
     SentinelConfig(SentinelModbusSerial config);
     SentinelConfig(SentinelModbusTcp config);
 
@@ -77,7 +77,7 @@ class SentinelConfig {
 };
 
 class SentinelDeviceTag {
-  public:
+   public:
     // TODO---
     SentinelDeviceTag(qint16 id, QString tk);
     //~SentinelDeviceTag();
@@ -100,7 +100,7 @@ class SentinelDeviceTag {
 };
 
 class SentinelDeviceLink {
-  public:
+   public:
     SentinelDeviceLink(qint16 id, QString tk);
     SentinelDeviceLink(qint16 id, QString tk, SentinelConfig config);
     void setConfig(SentinelModbusTcp config);
@@ -119,7 +119,7 @@ class SentinelDeviceLink {
     QString                        last_poll_time;
     QString                        status;
 
-  private:
+   private:
 };
 
-#endif // DEVICE_LINK_H
+#endif  // DEVICE_LINK_H
