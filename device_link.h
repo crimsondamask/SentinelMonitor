@@ -85,6 +85,8 @@ class SentinelDeviceTag {
     QString displayName() const;
     QString displayTk() const;
     QString displayStatus() const;
+    QString displayType() const;
+    QString displayAddress() const;
     QString displayDetails() const;
     bool    isEnabled() const;
     // -------

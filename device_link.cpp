@@ -11,11 +11,29 @@ SentinelDeviceTag::SentinelDeviceTag(qint16 id, QString tk) {
 }
 
 QString SentinelDeviceTag::displayName() const { return QString("%1").arg(this->name); }
-
 QString SentinelDeviceTag::displayTk() const { return QString("%1").arg(this->tk); }
-
 QString SentinelDeviceTag::displayStatus() const { return QString("%1").arg(this->status); }
 QString SentinelDeviceTag::displayDetails() const { return QString("%1").arg(this->tagDetails); }
+QString SentinelDeviceTag::displayType() const {
+    switch (this->value.type) {
+    case ST_INT_VALUE:
+        return QString("INT");
+    case ST_REAL_VALUE:
+        return QString("REAL");
+    case ST_BIT_VALUE:
+        return QString("BIT");
+    default:
+        return "N/A";
+    }
+}
+QString SentinelDeviceTag::displayAddress() const {
+    switch (this->address.type) {
+    case ST_MODBUS_ADDRESS:
+        return QString("MODBUS:HOLDING:%1").arg(this->address.modbusRegister);
+    default:
+        return "N/A";
+    }
+}
 
 bool SentinelDeviceTag::isEnabled() const { return this->enabled; }
 

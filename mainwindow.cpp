@@ -13,20 +13,20 @@ SentinelTableModel::SentinelTableModel(QObject *parent)
 
 int SentinelTableModel::rowCount(const QModelIndex &parent) const { return N_CHANNELS; }
 
-int SentinelTableModel::columnCount(const QModelIndex &parent) const { return 5; }
+int SentinelTableModel::columnCount(const QModelIndex &parent) const { return 7; }
 
 void SentinelTableModel::setTableData(SentinelDeviceLink *link) {
     this->deviceLinkData    = *link;
     this->linkType          = ST_DEVICE;
     QModelIndex topLeft     = createIndex(0, 0);
-    QModelIndex bottomRight = createIndex(5, N_CHANNELS - 1);
+    QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
     emit        dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
 void SentinelTableModel::setTableData(SentinelInputsLink *link) {
     this->inputsLinkData    = *link;
     this->linkType          = ST_INPUTS;
     QModelIndex topLeft     = createIndex(0, 0);
-    QModelIndex bottomRight = createIndex(5, N_CHANNELS - 1);
+    QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
     emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
 
@@ -45,12 +45,17 @@ QVariant      SentinelTableModel::headerData(int section, Qt::Orientation orient
                  case 2:
                 return QString("VALUE");
                  case 3:
-                return QString("DETAILS");
+                     return QString("TYPE");
                  case 4:
-                return QString("STATUS");
+                     return QString("ADDRESS");
+                 case 5:
+                     return QString("STATUS");
+                 case 6:
+                     return QString("");
+
                  default:
-                break;
-        }
+                     break;
+                 }
     }
 
          if (orientation == Qt::Vertical) {
@@ -78,9 +83,12 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
                         }
                     }
                     if (role == Qt::DisplayRole && index.column() == 3) {
-                        return QString("%1").arg(deviceLinkData.tags[i].displayDetails());
+                        return QString("%1").arg(deviceLinkData.tags[i].displayType());
                     }
                     if (role == Qt::DisplayRole && index.column() == 4) {
+                        return QString("%1").arg(deviceLinkData.tags[i].displayAddress());
+                    }
+                    if (role == Qt::DisplayRole && index.column() == 5) {
                         return QString("%1").arg(deviceLinkData.tags[i].displayStatus());
                     }
                 }
@@ -308,6 +316,36 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
                 this->postTagConfigRequest(selectedTag.id, this->tagReconfigJson(selectedTag));
                 return;
             }
+        } else if (clickedColumn == 1) {
+            QString name = {};
+            name         = QInputDialog::getText(this, QString("%1:%2 Enable Tag").arg(selectedTag.displayTk(), selectedTag.displayName()), tr("Tag Name"), QLineEdit::Normal, selectedTag.name, &ok);
+            if (ok) {
+                selectedTag.name = name;
+                this->postTagConfigRequest(selectedTag.id, this->tagReconfigJson(selectedTag));
+                return;
+            }
+
+        } else if (clickedColumn == 3) {
+            int valueType = {};
+            valueType = QInputDialog::getInt(this, QString("%1:%2 Tag Value Type").arg(selectedTag.displayTk(), selectedTag.displayName()), "0 for INT, 1 for REAL, 3 for BIT.", selectedTag.value.type,
+                                             0, 2, 1, &ok);
+            if (ok) {
+                selectedTag.value.type = valueType;
+                this->postTagConfigRequest(selectedTag.id, this->tagReconfigJson(selectedTag));
+                return;
+            }
+
+        } else if (clickedColumn == 4) {
+            if (selectedTag.address.type == ST_MODBUS_ADDRESS) {
+                int address = {};
+                address     = QInputDialog::getInt(this, QString("%1:%2 Tag Modbus Address").arg(selectedTag.displayTk(), selectedTag.displayName()), "Holding Register.",
+                                                   selectedTag.address.modbusRegister, 0, 65535, 1, &ok);
+                if (ok) {
+                    selectedTag.address.modbusRegister = address;
+                    this->postTagConfigRequest(selectedTag.id, this->tagReconfigJson(selectedTag));
+                    return;
+                }
+            }
         } else {
             return;
         }
@@ -325,7 +363,6 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
                 }
                 break;
             case ST_REAL_VALUE:
-
                 realInput = QInputDialog::getDouble(this, QString("%1:%2 REAL Input").arg(selectedTag.displayTk(), selectedTag.displayName()), tr("Write REAL Value:"), selectedTag.value.real_value,
                                                     FLT_MIN, FLT_MAX, 5, &ok);
                 if (ok) {
@@ -957,7 +994,6 @@ QByteArray MainWindow::tagReconfigJson(SentinelDeviceTag tag) {
     tagReconfig["tag_info"] = tagInfo;
 
     doc.setObject(tagReconfig);
-    qDebug() << doc.toJson();
     return doc.toJson();
 }
 
