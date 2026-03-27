@@ -16,22 +16,22 @@ int SentinelTableModel::rowCount(const QModelIndex &parent) const { return N_CHA
 
 int SentinelTableModel::columnCount(const QModelIndex &parent) const { return 7; }
 
-void SentinelTableModel::setTableData(SentinelDeviceLink *link) {
-    this->deviceLinkData    = *link;
+void SentinelTableModel::setTableData(SentinelDeviceLink link) {
+    this->deviceLinkData    = link;
     this->linkType          = ST_DEVICE;
     QModelIndex topLeft     = createIndex(0, 0);
     QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
     emit        dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
-void SentinelTableModel::setTableData(SentinelEvalLink *link) {
-    this->evalLinkData      = *link;
+void SentinelTableModel::setTableData(SentinelEvalLink link) {
+    this->evalLinkData      = link;
     this->linkType          = ST_EVALS;
     QModelIndex topLeft     = createIndex(0, 0);
     QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
     emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
-void SentinelTableModel::setTableData(SentinelInputsLink *link) {
-    this->inputsLinkData    = *link;
+void SentinelTableModel::setTableData(SentinelInputsLink link) {
+    this->inputsLinkData    = link;
     this->linkType          = ST_INPUTS;
     QModelIndex topLeft     = createIndex(0, 0);
     QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
@@ -1154,7 +1154,7 @@ void MainWindow::updateView() {
         this->linkDetails->setText(QString("%1:%2:%3").arg(selectedDeviceLink.tk, selectedDeviceLink.name, selectedDeviceLink.protocolDetails));
         this->linkStatus->setDisabled(false);
         this->linkStatus->setText(selectedDeviceLink.status);
-        this->model.setTableData(&selectedDeviceLink);
+        this->model.setTableData(selectedDeviceLink);
         this->tableView->setDisabled(false);
         this->linksList->setDisabled(false);
         break;
@@ -1162,7 +1162,7 @@ void MainWindow::updateView() {
         this->linkDetails->setText(QString("%1:%2").arg(selectedInputsLink.tk, selectedInputsLink.name));
         this->linkStatus->setDisabled(true);
         this->linkStatus->setText("INPUTS");
-        this->model.setTableData(&selectedInputsLink);
+        this->model.setTableData(selectedInputsLink);
         this->tableView->setDisabled(false);
         this->linksList->setDisabled(false);
         break;
@@ -1170,7 +1170,7 @@ void MainWindow::updateView() {
         this->linkDetails->setText(QString("%1:%2").arg(selectedEvalLink.tk, selectedEvalLink.name));
         this->linkStatus->setDisabled(true);
         this->linkStatus->setText("EVALS");
-        this->model.setTableData(&selectedEvalLink);
+        this->model.setTableData(selectedEvalLink);
         this->tableView->setDisabled(false);
         this->linksList->setDisabled(false);
         break;

@@ -56,9 +56,9 @@ class SentinelTableModel : public QAbstractTableModel {
 
     //---------------------------------------
 
-    void setTableData(SentinelDeviceLink *link);
-    void setTableData(SentinelInputsLink *link);
-    void setTableData(SentinelEvalLink *link);
+    void setTableData(SentinelDeviceLink link);
+    void setTableData(SentinelInputsLink link);
+    void setTableData(SentinelEvalLink link);
 
   private:
     int                linkType;
