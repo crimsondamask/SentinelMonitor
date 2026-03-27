@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "device_link.h"
+#include "eval_link.h"
 #include "inputs_link.h"
 
 enum SentinelLinkType {
@@ -15,12 +16,14 @@ class SentinelLink {
    public:
     SentinelLink(SentinelDeviceLink link);
     SentinelLink(SentinelInputsLink link);
+    SentinelLink(SentinelEvalLink link);
     SentinelLink(const SentinelLink &other);
     ~SentinelLink();
 
     int                type;
     SentinelDeviceLink deviceLink;
     SentinelInputsLink inputsLink;
+    SentinelEvalLink   evalLink;
 };
 
 #endif  // LINK_H

@@ -58,11 +58,13 @@ class SentinelTableModel : public QAbstractTableModel {
 
     void setTableData(SentinelDeviceLink *link);
     void setTableData(SentinelInputsLink *link);
+    void setTableData(SentinelEvalLink *link);
 
-   private:
+  private:
     int                linkType;
     SentinelDeviceLink deviceLinkData;
     SentinelInputsLink inputsLinkData;
+    SentinelEvalLink   evalLinkData;
 };
 
 class MainWindow : public QMainWindow {
@@ -77,7 +79,9 @@ class MainWindow : public QMainWindow {
     void       postTagConfigRequest(int linkId, QByteArray data);
     void       writeTagFinished();
     void       reconfigTagFinished();
+    void       reconfigLinksFinished();
     void       saveActionClicked();
+    void       sendConfigActionClicked();
     void       aboutActionClicked();
     void       tagRowClicked(const QModelIndex &index);
     void       parseServerData();
@@ -116,6 +120,7 @@ class MainWindow : public QMainWindow {
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
     QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigTagReply;
+    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigLinksReply;
 };
 
 #endif  // MAINWINDOW_H

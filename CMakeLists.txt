@@ -30,6 +30,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         device_link.h device_link.cpp
         config.h
         inputs_link.h inputs_link.cpp
+        eval_link.h eval_link.cpp
 
     )
 # Define target properties for Android with Qt 6 as:
