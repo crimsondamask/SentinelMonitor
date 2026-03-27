@@ -121,6 +121,9 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
                     if (role == Qt::DisplayRole && index.column() == 3) {
                         return QString("%1").arg(evalLinkData.tags[i].displayType());
                     }
+                    if (role == Qt::DisplayRole && index.column() == 4) {
+                        return QString("%1").arg(evalLinkData.tags[i].displayFormula());
+                    }
                     if (role == Qt::DisplayRole && index.column() == 5) {
                         return QString("%1").arg(evalLinkData.tags[i].displayStatus());
                     }
@@ -1026,6 +1029,16 @@ void MainWindow::parseServerData() {
 
                 QString tagName               = tagObject.value("name").toString();
                 evalLink.tags[tag_index].name = tagName;
+
+                if (!tagObject.value("formula").isString()) {
+                    this->error       = true;
+                    this->serverError = QString("tag %1 name parse failed.").arg(tag_index);
+                    this->statusLabel->setText(this->serverError);
+                    return;
+                }
+
+                QString tagFormula               = tagObject.value("formula").toString();
+                evalLink.tags[tag_index].formula = tagFormula;
 
                 if (!tagObject.value("enabled").isBool()) {
                     this->error       = true;

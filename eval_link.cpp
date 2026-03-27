@@ -11,6 +11,7 @@ SentinelEvalTag::SentinelEvalTag(qint16 id, QString tk) {
 QString SentinelEvalTag::displayName() const { return QString("%1").arg(this->name); }
 QString SentinelEvalTag::displayTk() const { return QString("%1").arg(this->tk); }
 QString SentinelEvalTag::displayStatus() const { return QString("%1").arg(this->status); }
+QString SentinelEvalTag::displayFormula() const { return QString("%1").arg(this->formula); }
 bool    SentinelEvalTag::isEnabled() const { return this->enabled; }
 QString SentinelEvalTag::displayType() const {
     switch (this->value.type) {

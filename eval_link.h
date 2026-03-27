@@ -11,12 +11,14 @@ class SentinelEvalTag {
     QString displayName() const;
     QString displayTk() const;
     QString displayStatus() const;
+    QString displayFormula() const;
     QString displayType() const;
     bool    isEnabled() const;
 
     qint16           id;
     QString          tk;
     QString          name;
+    QString          formula;
     bool             enabled;
     SentinelTagValue value;
     QString          status;
