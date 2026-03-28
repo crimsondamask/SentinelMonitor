@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include <QWidget>
+#include <QtGlobal>
 #include <QtNetwork/QtNetwork>
 #include <cfloat>
 
@@ -10,9 +11,14 @@
 #include "link.h"
 
 SentinelTableModel::SentinelTableModel(QObject *parent)
-    : QAbstractTableModel(parent), deviceLinkData(SentinelDeviceLink(0, QString("LINK1"))), evalLinkData(0, QString("EVALS LINK")), inputsLinkData(SentinelInputsLink(0, QString("INPUTS LINK"))) {}
+    : QAbstractTableModel(parent)
+    , deviceLinkData(SentinelDeviceLink(0, QString("LINK1")))
+    , evalLinkData(1, QString("EVALS"))
+    , inputsLinkData(SentinelInputsLink(2, QString("INPUTS"))) {}
 
-int SentinelTableModel::rowCount(const QModelIndex &parent) const { return N_CHANNELS; }
+int SentinelTableModel::rowCount(const QModelIndex &parent) const {
+    return N_CHANNELS;
+}
 
 int SentinelTableModel::columnCount(const QModelIndex &parent) const { return 7; }
 
@@ -1118,11 +1124,11 @@ void MainWindow::parseServerData() {
             return;
         }
 
-        // Save json data
-        this->configData = QString("%1").arg(readData.toStdString());
-        // Parse successfull. We update the GUI.
-        this->updateView();
     }
+    // Save json data
+    this->configData = QString("%1").arg(readData.toStdString());
+    // Parse successfull. We update the GUI.
+    this->updateView();
 }
 
 void MainWindow::updateView() {
@@ -1144,11 +1150,17 @@ void MainWindow::updateView() {
         return;
     }
 
-    SentinelLink &selectedLink = this->linksBuffer[this->selectedLinkIndex];
+    if (this->linksBuffer.size() <= this->selectedLinkIndex) {
+        qDebug() << "Selected Link index larger than array size. Index: " << this->selectedLinkIndex << "Size: " << this->linksBuffer.size();
+        return;
+    }
 
-    SentinelDeviceLink &selectedDeviceLink = selectedLink.deviceLink;
-    SentinelInputsLink &selectedInputsLink = selectedLink.inputsLink;
-    SentinelEvalLink   &selectedEvalLink   = selectedLink.evalLink;
+    Q_ASSERT(this->linksBuffer.size() > this->selectedLinkIndex);
+    SentinelLink selectedLink = this->linksBuffer[this->selectedLinkIndex];
+
+    SentinelDeviceLink selectedDeviceLink = selectedLink.deviceLink;
+    SentinelInputsLink selectedInputsLink = selectedLink.inputsLink;
+    SentinelEvalLink   selectedEvalLink   = selectedLink.evalLink;
     switch (selectedLink.type) {
     case ST_DEVICE:
         this->linkDetails->setText(QString("%1:%2:%3").arg(selectedDeviceLink.tk, selectedDeviceLink.name, selectedDeviceLink.protocolDetails));
