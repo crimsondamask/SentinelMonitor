@@ -38,89 +38,91 @@ class MainWindow;
 QT_END_NAMESPACE
 
 class SentinelTableModel : public QAbstractTableModel {
-    Q_OBJECT
-   public:
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+  Q_OBJECT
+public:
+  QVariant headerData(int section, Qt::Orientation orientation,
+                      int role = Qt::DisplayRole) const override;
 
-    // TableView reimplementations-----------
+  // TableView reimplementations-----------
 
-    explicit SentinelTableModel(QObject *parent = nullptr);
+  explicit SentinelTableModel(QObject *parent = nullptr);
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+  int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+  int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+  QVariant data(const QModelIndex &index,
+                int role = Qt::DisplayRole) const override;
 
-    Qt::ItemFlags flags(const QModelIndex &index) const override;
+  Qt::ItemFlags flags(const QModelIndex &index) const override;
 
-    //---------------------------------------
+  //---------------------------------------
 
-    void setTableData(SentinelDeviceLink link);
-    void setTableData(SentinelInputsLink link);
-    void setTableData(SentinelEvalLink link);
+  void setTableData(SentinelDeviceLink link);
+  void setTableData(SentinelInputsLink link);
+  void setTableData(SentinelEvalLink link);
 
-  private:
-    int                linkType;
-    SentinelDeviceLink deviceLinkData;
-    SentinelInputsLink inputsLinkData;
-    SentinelEvalLink   evalLinkData;
+private:
+  int linkType;
+  SentinelDeviceLink deviceLinkData;
+  SentinelInputsLink inputsLinkData;
+  SentinelEvalLink evalLinkData;
 };
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
+  Q_OBJECT
 
-   public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+public:
+  MainWindow(QWidget *parent = nullptr);
+  ~MainWindow();
 
-    void       initRequest();
-    void       postWriteRequest(int linkId, int tagId, SentinelTagValue value);
-    void       postTagConfigRequest(int linkId, QByteArray data);
-    void       writeTagFinished();
-    void       reconfigTagFinished();
-    void       reconfigLinksFinished();
-    void       saveActionClicked();
-    void       sendConfigActionClicked();
-    void       aboutActionClicked();
-    void       tagRowClicked(const QModelIndex &index);
-    void       parseServerData();
-    void       selectedLinkChanged();
-    void       updateView();
-    void       httpErrorOccurred();
-    bool       isError();
-    QString    errorString();
-    QByteArray tagReconfigJson(SentinelDeviceTag tag);
-    QByteArray jsonFromTag(SentinelInputsTag tag);
+  void initRequest();
+  void postWriteRequest(int linkId, int tagId, SentinelTagValue value);
+  void postTagConfigRequest(int linkId, QByteArray data);
+  void writeTagFinished();
+  void reconfigTagFinished();
+  void reconfigLinksFinished();
+  void saveActionClicked();
+  void sendConfigActionClicked();
+  void aboutActionClicked();
+  void tagRowClicked(const QModelIndex &index);
+  void parseServerData();
+  void selectedLinkChanged();
+  void updateView();
+  void httpErrorOccurred();
+  bool isError();
+  QString errorString();
+  QByteArray tagReconfigJson(SentinelDeviceTag tag);
+  QByteArray jsonFromTag(SentinelInputsTag tag);
 
-   private:
-    Ui::MainWindow *ui;
-    QLabel         *statusLabel;
-    QLineEdit      *linkDetails;
-    QLineEdit      *linkStatus;
-    QPushButton    *downloadButton;
-    QComboBox      *linksList;
-    QTimer         *pollTimer;
-    QTableView     *tableView;
-    QWidget        *centralWidget;
-    QMenuBar       *mainMenuBar;
-    QMenu          *fileMenu;
-    QMenu          *viewMenu;
-    QMenu          *helpMenu;
+private:
+  Ui::MainWindow *ui;
+  QLabel *statusLabel;
+  QLineEdit *linkDetails;
+  QLineEdit *linkStatus;
+  QPushButton *downloadButton;
+  QComboBox *linksList;
+  QTimer *pollTimer;
+  QTableView *tableView;
+  QWidget *centralWidget;
+  QMenuBar *mainMenuBar;
+  QMenu *fileMenu;
+  QMenu *viewMenu;
+  QMenu *helpMenu;
 
-    QString                                                  configData;
-    int                                                      selectedLinkIndex;
-    bool                                                     error;
-    QString                                                  serverError;
-    std::vector<SentinelLink>                                linksBuffer;
-    qsizetype                                                numLinks;
-    SentinelTableModel                                       model;
-    QUrl                                                     url;
-    QNetworkAccessManager                                    qnam;
-    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
-    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
-    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigTagReply;
-    QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigLinksReply;
+  QString configData;
+  int selectedLinkIndex;
+  bool error;
+  QString serverError;
+  std::vector<SentinelLink> linksBuffer;
+  qsizetype numLinks;
+  SentinelTableModel model;
+  QUrl url;
+  QNetworkAccessManager qnam;
+  QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
+  QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
+  QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigTagReply;
+  QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigLinksReply;
 };
 
-#endif  // MAINWINDOW_H
+#endif // MAINWINDOW_H

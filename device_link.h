@@ -30,98 +30,98 @@
 #include "config.h"
 
 enum SentinelProtocol {
-    ST_MODBUS_TCP,
-    ST_MODBUS_SERIAL,
+  ST_MODBUS_TCP,
+  ST_MODBUS_SERIAL,
 };
 
 enum TagAddressType {
-    ST_MODBUS_ADDRESS,
+  ST_MODBUS_ADDRESS,
 };
 
 enum SentinelBaudrate {
-    ST_BAUD_9600  = 9600,
-    ST_BAUD_38400 = 38400,
+  ST_BAUD_9600 = 9600,
+  ST_BAUD_38400 = 38400,
 };
 
 struct SentinelTagAddress {
-    int type;
-    int modbusRegister;
+  int type;
+  int modbusRegister;
 };
 
 class SentinelModbusSerial {
-   public:
-    SentinelModbusSerial(QString comPort, int baudrate, int slave, int parity);
-    SentinelModbusSerial(QString comPort, int baudrate, int slave);
+public:
+  SentinelModbusSerial(QString comPort, int baudrate, int slave, int parity);
+  SentinelModbusSerial(QString comPort, int baudrate, int slave);
 
-    QString comPort;
-    int     baudrate;
-    int     parity;
-    int     slave;
+  QString comPort;
+  int baudrate;
+  int parity;
+  int slave;
 };
 class SentinelModbusTcp {
-   public:
-    SentinelModbusTcp(QString ip, int port);
+public:
+  SentinelModbusTcp(QString ip, int port);
 
-    QString ip;
-    int     port;
+  QString ip;
+  int port;
 };
 
 class SentinelConfig {
-   public:
-    SentinelConfig(SentinelModbusSerial config);
-    SentinelConfig(SentinelModbusTcp config);
+public:
+  SentinelConfig(SentinelModbusSerial config);
+  SentinelConfig(SentinelModbusTcp config);
 
-    int                  protocol;
-    SentinelModbusTcp    modbusTcp;
-    SentinelModbusSerial modbusSerial;
+  int protocol;
+  SentinelModbusTcp modbusTcp;
+  SentinelModbusSerial modbusSerial;
 };
 
 class SentinelDeviceTag {
-   public:
-    // TODO---
-    SentinelDeviceTag(qint16 id, QString tk);
-    //~SentinelDeviceTag();
-    QString displayValue() const;
-    QString displayName() const;
-    QString displayTk() const;
-    QString displayStatus() const;
-    QString displayType() const;
-    QString displayAddress() const;
-    QString displayDetails() const;
-    bool    isEnabled() const;
-    // -------
+public:
+  // TODO---
+  SentinelDeviceTag(qint16 id, QString tk);
+  //~SentinelDeviceTag();
+  QString displayValue() const;
+  QString displayName() const;
+  QString displayTk() const;
+  QString displayStatus() const;
+  QString displayType() const;
+  QString displayAddress() const;
+  QString displayDetails() const;
+  bool isEnabled() const;
+  // -------
 
-    qint16             id;
-    QString            tk;
-    QString            name;
-    QString            tagDetails;
-    bool               enabled;
-    SentinelTagAddress address;
-    SentinelTagValue   value;
-    QString            status;
+  qint16 id;
+  QString tk;
+  QString name;
+  QString tagDetails;
+  bool enabled;
+  SentinelTagAddress address;
+  SentinelTagValue value;
+  QString status;
 };
 
 class SentinelDeviceLink {
-   public:
-    SentinelDeviceLink(qint16 id, QString tk);
-    SentinelDeviceLink(qint16 id, QString tk, SentinelConfig config);
-    void setConfig(SentinelModbusTcp config);
-    void setConfig(SentinelModbusSerial config);
-    //~SentinelDeviceLink();
+public:
+  SentinelDeviceLink(qint16 id, QString tk);
+  SentinelDeviceLink(qint16 id, QString tk, SentinelConfig config);
+  void setConfig(SentinelModbusTcp config);
+  void setConfig(SentinelModbusSerial config);
+  //~SentinelDeviceLink();
 
-    qint16                         id;
-    QString                        tk;
-    QString                        name;
-    bool                           enable;
-    int                            protocol;
-    SentinelConfig                 config;
-    QString                        protocolDetails;
-    std::vector<SentinelDeviceTag> tags;
-    size_t                         tag_count;
-    QString                        last_poll_time;
-    QString                        status;
+  qint16 id;
+  QString tk;
+  QString name;
+  bool enable;
+  int protocol;
+  SentinelConfig config;
+  QString protocolDetails;
+  std::vector<SentinelDeviceTag> tags;
+  size_t tag_count;
+  QString last_poll_time;
+  QString status;
 
-   private:
+private:
 };
 
-#endif  // DEVICE_LINK_H
+#endif // DEVICE_LINK_H
