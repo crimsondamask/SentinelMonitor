@@ -218,7 +218,7 @@ MainWindow::MainWindow(QWidget *parent)
 
   connect(pollTimer, &QTimer::timeout, this, &MainWindow::initRequest);
 
-  pollTimer->start(1000);
+  pollTimer->start(500);
   // Repeating timer
   pollTimer->setSingleShot(false);
   linksList = new QComboBox();
@@ -1241,8 +1241,8 @@ void MainWindow::parseServerData() {
           evalLink.tags[tag_index].value.type = ST_INT_VALUE;
           evalLink.tags[tag_index].value.int_value = tagIntValue;
 
-        } else if (tagValueObject.value("Bit").isDouble()) {
-          int tagBitValue = tagValueObject.value("Bit").toInt();
+        } else if (tagValueObject.value("Bit").isBool()) {
+          int tagBitValue = tagValueObject.value("Bit").toBool();
           evalLink.tags[tag_index].value.type = ST_BIT_VALUE;
           evalLink.tags[tag_index].value.bit_value = tagBitValue;
 
