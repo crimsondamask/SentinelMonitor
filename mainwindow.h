@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialog>
 #include <QDir>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -109,6 +110,7 @@ private:
   QMenu *fileMenu;
   QMenu *viewMenu;
   QMenu *helpMenu;
+  QDialog *evalDialog;
 
   QString configData;
   int selectedLinkIndex;

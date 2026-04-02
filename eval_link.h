@@ -4,6 +4,13 @@
 #include "config.h"
 #include <QString>
 
+class EvalVar {
+public:
+  int linkId;
+  int tagId;
+  SentinelTagValue value;
+};
+
 class SentinelEvalTag {
 public:
   SentinelEvalTag(qint16 id, QString tk);
@@ -18,6 +25,7 @@ public:
   qint16 id;
   QString tk;
   QString name;
+  std::vector<EvalVar> vars;
   QString formula;
   bool enabled;
   SentinelTagValue value;

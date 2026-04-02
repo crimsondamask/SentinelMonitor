@@ -502,6 +502,24 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     } else {
       return;
     }
+  } else if (this->linksBuffer[selectedLinkIndex].type == ST_EVALS) {
+
+    SentinelEvalTag selectedTag =
+        this->linksBuffer[selectedLinkIndex].evalLink.tags[clickedRow];
+
+    this->evalDialog = new QDialog(this);
+    QVBoxLayout *layout = new QVBoxLayout(this->evalDialog);
+    for (int i = 0; i < selectedTag.vars.size(); i++) {
+      EvalVar ev = selectedTag.vars[i];
+      QLineEdit *variableData = new QLineEdit(this->evalDialog);
+      variableData->setReadOnly(true);
+      variableData->setText(
+          QString("Variable -> %1 %2").arg(ev.linkId).arg(ev.tagId));
+      layout->addWidget(variableData);
+    }
+
+    this->evalDialog->setLayout(layout);
+    this->evalDialog->exec();
   } else {
     QMessageBox::information(nullptr, "Unimplemented Link",
                              "Selected link doesn't accept writing.");
@@ -610,6 +628,8 @@ void MainWindow::initRequest() {
           &MainWindow::parseServerData);
 }
 
+// Parses the JSON data received from the server.
+// This is a large function.
 void MainWindow::parseServerData() {
   if (reply->error() != QNetworkReply::NoError) {
     this->error = true;
@@ -1174,6 +1194,54 @@ void MainWindow::parseServerData() {
         QString tagName = tagObject.value("name").toString();
         evalLink.tags[tag_index].name = tagName;
 
+        if (!tagObject.value("vars").isArray()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 vars parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QJsonArray tagVarsArray = tagObject.value("vars").toArray();
+        int varsArraySize = tagVarsArray.size();
+
+        for (int i = 0; i < varsArraySize; i++) {
+          EvalVar evalVar;
+          QJsonObject varObject = tagVarsArray[i].toObject();
+          int linkId = varObject.value("link_id").toInt();
+          int tagId = varObject.value("tag_id").toInt();
+
+          if (!varObject.value("value").isObject()) {
+            this->error = true;
+            this->serverError =
+                QString("tag %1 vars parse failed.").arg(tag_index);
+            this->statusLabel->setText(this->serverError);
+            return;
+          }
+
+          QJsonObject varValueObject = varObject.value("value").toObject();
+
+          evalVar.linkId = linkId;
+          evalVar.tagId = tagId;
+
+          if (varValueObject.value("Real").isDouble()) {
+            evalVar.value.type = ST_REAL_VALUE;
+            evalVar.value.real_value = varValueObject.value("Real").toDouble();
+          } else if (varValueObject.value("Int").isDouble()) {
+            evalVar.value.type = ST_INT_VALUE;
+            evalVar.value.int_value = varValueObject.value("Int").toInt();
+          } else if (varValueObject.value("Bit").isBool()) {
+            evalVar.value.type = ST_BIT_VALUE;
+            evalVar.value.int_value = varValueObject.value("Bit").toBool();
+          } else {
+            this->error = true;
+            this->serverError =
+                QString("tag %1 vars value parse failed.").arg(tag_index);
+            this->statusLabel->setText(this->serverError);
+            return;
+          }
+          evalLink.tags[tag_index].vars.push_back(evalVar);
+        }
         if (!tagObject.value("formula").isString()) {
           this->error = true;
           this->serverError =
