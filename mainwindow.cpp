@@ -527,11 +527,9 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     QLineEdit *formulaEdit = new QLineEdit(this->evalDialog);
     formulaEdit->setText(QString("%1").arg(selectedTag.formula));
 
-    // QPushButton *newVarButton = new QPushButton("New Variable");
 
     grid->addWidget(formulaLabel, 1, 0);
     grid->addWidget(formulaEdit, 1, 1);
-    // grid->addWidget(newVarButton, 1, 2);
 
     QComboBox *typeCombo = new QComboBox(this->evalDialog);
     typeCombo->addItem("INT");
@@ -541,6 +539,10 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
     grid->addWidget(typeCombo, 2, 0);
     grid->addWidget(typeCombo, 2, 1);
+
+    QPushButton *applyButton = new QPushButton(this->evalDialog);
+    applyButton->setText("Apply");
+    grid->addWidget(applyButton, 1, 2);
 
     for (int i = 0; i < selectedTag.vars.size(); i++) {
       EvalVar ev = selectedTag.vars[i];
@@ -580,6 +582,9 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     }
 
     this->evalDialog->setLayout(grid);
+    connect(applyButton, &QPushButton::clicked, [=]() {
+
+    });
     this->evalDialog->exec();
 
     return;

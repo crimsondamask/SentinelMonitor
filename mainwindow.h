@@ -80,8 +80,10 @@ public:
   void initRequest();
   void postWriteRequest(int linkId, int tagId, SentinelTagValue value);
   void postTagConfigRequest(int linkId, QByteArray data);
+  // void postEvalConfigRequest(int linkId, QByteArray data);
   void writeTagFinished();
   void reconfigTagFinished();
+  // void evalApplyButtonClicked();
   void reconfigLinksFinished();
   void saveActionClicked();
   void sendConfigActionClicked();
@@ -94,6 +96,7 @@ public:
   bool isError();
   QString errorString();
   QByteArray tagReconfigJson(SentinelDeviceTag tag);
+  // QByteArray evalReconfigJson(SentinelEvalTag eval);
   QByteArray jsonFromTag(SentinelInputsTag tag);
 
 private:
@@ -123,6 +126,7 @@ private:
   QNetworkAccessManager qnam;
   QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
   QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> writeTagReply;
+  QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigEvalReply;
   QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigTagReply;
   QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reconfigLinksReply;
 };
