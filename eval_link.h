@@ -6,6 +6,7 @@
 
 class EvalVar {
 public:
+  QString name;
   int linkId;
   int tagId;
   SentinelTagValue value;

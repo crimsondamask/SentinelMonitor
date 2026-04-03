@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+#include <QPlainTextEdit>
 #include <QWidget>
 #include <QtGlobal>
 #include <QtNetwork/QtNetwork>
@@ -179,7 +180,8 @@ MainWindow::MainWindow(QWidget *parent)
       statusLabel(new QLabel("Disconnected.")), downloadButton(new QPushButton),
       pollTimer(new QTimer(this)), centralWidget(new QWidget(this)),
       linkDetails(new QLineEdit("N/A")), linkStatus(new QLineEdit("N/A")),
-      tableView(new QTableView), selectedLinkIndex(0) {
+      tableView(new QTableView), selectedLinkIndex(0),
+      selectedEvalBuffer(SentinelEvalTag(0, "Hello")) {
   ui->setupUi(this);
 
   QLocale::setDefault(QLocale::c());
@@ -509,6 +511,7 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
     SentinelEvalTag selectedTag =
         this->linksBuffer[selectedLinkIndex].evalLink.tags[clickedRow];
+    this->selectedEvalBuffer = selectedTag;
 
     this->evalDialog = new QDialog(this);
     QLabel *nameLabel = new QLabel(this->evalDialog);
@@ -524,18 +527,20 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     QLabel *formulaLabel = new QLabel(this->evalDialog);
     formulaLabel->setText("Formula");
 
-    QLineEdit *formulaEdit = new QLineEdit(this->evalDialog);
-    formulaEdit->setText(QString("%1").arg(selectedTag.formula));
-
+    QPlainTextEdit *formulaEdit = new QPlainTextEdit(this->evalDialog);
+    formulaEdit->setPlainText(QString("%1").arg(selectedTag.formula));
+    formulaEdit->setFixedHeight(300);
 
     grid->addWidget(formulaLabel, 1, 0);
     grid->addWidget(formulaEdit, 1, 1);
 
     QComboBox *typeCombo = new QComboBox(this->evalDialog);
     typeCombo->addItem("INT");
-    typeCombo->addItem("DINT");
     typeCombo->addItem("REAL");
-    typeCombo->addItem("Bit");
+    typeCombo->addItem("BIT");
+    // typeCombo->addItem("DINT");
+
+    typeCombo->setCurrentIndex(selectedTag.value.type);
 
     grid->addWidget(typeCombo, 2, 0);
     grid->addWidget(typeCombo, 2, 1);
@@ -543,6 +548,12 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     QPushButton *applyButton = new QPushButton(this->evalDialog);
     applyButton->setText("Apply");
     grid->addWidget(applyButton, 1, 2);
+
+    std::vector<QComboBox *> combosVec{};
+    combosVec.reserve(selectedTag.vars.size());
+
+    std::vector<QLineEdit *> lineEditVec{};
+    lineEditVec.reserve(selectedTag.vars.size());
 
     for (int i = 0; i < selectedTag.vars.size(); i++) {
       EvalVar ev = selectedTag.vars[i];
@@ -569,12 +580,16 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
       }
 
       linkCombo->setCurrentIndex(selectedTag.vars[i].linkId);
+      combosVec.push_back(linkCombo);
+
       QLabel *label = new QLabel(this->evalDialog);
       label->setText(QString("Variable %1").arg(i));
 
       QLineEdit *tagEdit = new QLineEdit(this->evalDialog);
       tagEdit->setText(QString("%1").arg(selectedTag.vars[i].tagId));
       tagEdit->setValidator(new QIntValidator(0, N_CHANNELS, this->evalDialog));
+
+      lineEditVec.push_back(tagEdit);
 
       grid->addWidget(label, i + 3, 0);
       grid->addWidget(linkCombo, i + 3, 1);
@@ -583,7 +598,25 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
     this->evalDialog->setLayout(grid);
     connect(applyButton, &QPushButton::clicked, [=]() {
+      this->selectedEvalBuffer.name = nameEdit->text();
+      this->selectedEvalBuffer.value.type = typeCombo->currentIndex();
+      this->selectedEvalBuffer.formula = formulaEdit->toPlainText();
 
+      for (int i = 0; i < this->selectedEvalBuffer.vars.size(); i++) {
+        this->selectedEvalBuffer.vars[i].linkId = combosVec[i]->currentIndex();
+        bool ok{};
+        int tagId = lineEditVec[i]->text().toInt(&ok);
+        if (!ok) {
+          return;
+        }
+        this->selectedEvalBuffer.vars[i].tagId = tagId;
+      }
+
+      qDebug() << this->evalReconfigJson(this->selectedEvalBuffer);
+      this->postEvalConfigRequest(
+          this->selectedLinkIndex,
+          this->evalReconfigJson(this->selectedEvalBuffer));
+      this->evalDialog->accept();
     });
     this->evalDialog->exec();
 
@@ -596,6 +629,70 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
   this->postWriteRequest(this->selectedLinkIndex, clickedRow, tagValue);
 }
+QByteArray MainWindow::evalReconfigJson(SentinelEvalTag eval) {
+  QJsonDocument doc{};
+  QJsonObject evalObject{};
+  QJsonObject tagInfo{};
+  QJsonObject tagValue{};
+  QJsonObject tagReconfig{};
+  QJsonArray varsArray{};
+
+  switch (eval.value.type) {
+  case ST_INT_VALUE:
+    tagValue["Int"] = eval.value.int_value;
+    break;
+  case ST_REAL_VALUE:
+    tagValue["Real"] = eval.value.real_value;
+    break;
+  case ST_BIT_VALUE:
+    tagValue["Bit"] = (bool)eval.value.bit_value;
+    break;
+  default:
+    break;
+  }
+
+  tagInfo["link_id"] = this->selectedLinkIndex;
+  tagInfo["tag_id"] = eval.id;
+  evalObject["id"] = eval.id;
+  evalObject["tk"] = eval.tk;
+  evalObject["name"] = eval.name;
+  evalObject["enabled"] = eval.enabled;
+  evalObject["formula"] = eval.formula;
+  evalObject["value"] = tagValue;
+  evalObject["status"] = QString("Normal");
+
+  for (int i = 0; i < eval.vars.size(); i++) {
+    QJsonObject evalVarObject{};
+    evalVarObject["name"] = eval.vars[i].name;
+    evalVarObject["link_id"] = eval.vars[i].linkId;
+    evalVarObject["tag_id"] = eval.vars[i].tagId;
+    QJsonObject varValue{};
+    varValue["Real"] = 0.0;
+    evalVarObject["value"] = varValue;
+
+    varsArray.append(evalVarObject);
+  }
+  evalObject["vars"] = varsArray;
+
+  tagReconfig["tag_info"] = tagInfo;
+  tagReconfig["tag_data"] = evalObject;
+
+  doc.setObject(tagReconfig);
+  return doc.toJson();
+}
+
+void MainWindow::postEvalConfigRequest(int linkId, QByteArray data) {
+
+  QUrl url = QUrl(QString(RECONFIG_EVAL_URL));
+  QNetworkRequest postRequest = QNetworkRequest(url);
+  qDebug() << data;
+  postRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                        QString("application/json"));
+  this->reconfigTagReply.reset(qnam.post(postRequest, data));
+  connect(this->reconfigTagReply.get(), &QNetworkReply::finished, this,
+          &MainWindow::reconfigTagFinished);
+}
+
 void MainWindow::aboutActionClicked() {
   QMessageBox::information(nullptr, "About",
                            "Sentinel Monitor V1.0. 2026 by Abdelkader Madoui.");
@@ -1276,6 +1373,7 @@ void MainWindow::parseServerData() {
         for (int i = 0; i < varsArraySize; i++) {
           EvalVar evalVar;
           QJsonObject varObject = tagVarsArray[i].toObject();
+          QString name = varObject.value("name").toString();
           int linkId = varObject.value("link_id").toInt();
           int tagId = varObject.value("tag_id").toInt();
 
@@ -1289,6 +1387,7 @@ void MainWindow::parseServerData() {
 
           QJsonObject varValueObject = varObject.value("value").toObject();
 
+          evalVar.name = name;
           evalVar.linkId = linkId;
           evalVar.tagId = tagId;
 
