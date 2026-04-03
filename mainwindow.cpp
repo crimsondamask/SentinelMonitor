@@ -304,14 +304,16 @@ void MainWindow::writeTagFinished() {
         writeTagReply->attribute(QNetworkRequest::HttpStatusCodeAttribute)
             .toInt();
     if (statusCode == 200) {
-      QMessageBox::information(this, "Success", "Tag write was successfull.");
+      // QMessageBox::information(this, "Success", "Tag write was
+      // successfull.");
     } else {
       QMessageBox::critical(this, "Server Error",
                             "The server could not write the tag successfully.");
     }
   } else {
-    QMessageBox::critical(this, "Write Error",
-                          "Could not write the tag successfully.");
+    QString errorMsg = QString("Could not write tag. %1")
+                           .arg(this->writeTagReply->errorString());
+    QMessageBox::critical(this, "Write Error", errorMsg);
   }
 }
 
@@ -508,18 +510,82 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
         this->linksBuffer[selectedLinkIndex].evalLink.tags[clickedRow];
 
     this->evalDialog = new QDialog(this);
-    QVBoxLayout *layout = new QVBoxLayout(this->evalDialog);
+    QLabel *nameLabel = new QLabel(this->evalDialog);
+    nameLabel->setText("Name");
+
+    QLineEdit *nameEdit = new QLineEdit(this->evalDialog);
+    nameEdit->setText(QString("%1").arg(selectedTag.name));
+
+    QGridLayout *grid = new QGridLayout(this->evalDialog);
+    grid->addWidget(nameLabel, 0, 0);
+    grid->addWidget(nameEdit, 0, 1);
+
+    QLabel *formulaLabel = new QLabel(this->evalDialog);
+    formulaLabel->setText("Formula");
+
+    QLineEdit *formulaEdit = new QLineEdit(this->evalDialog);
+    formulaEdit->setText(QString("%1").arg(selectedTag.formula));
+
+    QPushButton *newVarButton = new QPushButton("New Variable");
+
+    grid->addWidget(formulaLabel, 1, 0);
+    grid->addWidget(formulaEdit, 1, 1);
+    grid->addWidget(newVarButton, 1, 2);
+
+    connect(newVarButton, &QPushButton::clicked, [=]() {
+
+    });
+
+    QComboBox *typeCombo = new QComboBox(this->evalDialog);
+    typeCombo->addItem("INT");
+    typeCombo->addItem("DINT");
+    typeCombo->addItem("REAL");
+    typeCombo->addItem("Bit");
+
+    grid->addWidget(typeCombo, 2, 0);
+    grid->addWidget(typeCombo, 2, 1);
+
     for (int i = 0; i < selectedTag.vars.size(); i++) {
       EvalVar ev = selectedTag.vars[i];
-      QLineEdit *variableData = new QLineEdit(this->evalDialog);
-      variableData->setReadOnly(true);
-      variableData->setText(
-          QString("Variable -> %1 %2").arg(ev.linkId).arg(ev.tagId));
-      layout->addWidget(variableData);
+
+      QComboBox *linkCombo = new QComboBox(this->evalDialog);
+      for (int j = 0; j < this->linksBuffer.size(); j++) {
+        switch (this->linksBuffer[j].type) {
+        case ST_DEVICE:
+          linkCombo->addItem(
+              QString("%1").arg(this->linksBuffer[j].deviceLink.name));
+          break;
+        case ST_INPUTS:
+          linkCombo->addItem(
+              QString("%1").arg(this->linksBuffer[j].inputsLink.name));
+          break;
+        case ST_EVALS:
+          linkCombo->addItem(
+              QString("%1").arg(this->linksBuffer[j].evalLink.name));
+          break;
+        default:
+          linkCombo->addItem("Unidentified");
+          break;
+        }
+      }
+
+      linkCombo->setCurrentIndex(selectedTag.vars[i].linkId);
+      QLabel *label = new QLabel(this->evalDialog);
+      label->setText(QString("Variable %1").arg(i));
+
+      QLineEdit *tagEdit = new QLineEdit(this->evalDialog);
+      tagEdit->setText(QString("%1").arg(selectedTag.vars[i].tagId));
+      tagEdit->setValidator(new QIntValidator(0, N_CHANNELS, this->evalDialog));
+
+      grid->addWidget(label, i + 3, 0);
+      grid->addWidget(linkCombo, i + 3, 1);
+      grid->addWidget(tagEdit, i + 3, 2);
     }
 
-    this->evalDialog->setLayout(layout);
+    this->evalDialog->setLayout(grid);
     this->evalDialog->exec();
+
+    return;
   } else {
     QMessageBox::information(nullptr, "Unimplemented Link",
                              "Selected link doesn't accept writing.");
@@ -1480,8 +1546,8 @@ void MainWindow::reconfigTagFinished() {
         reconfigTagReply->attribute(QNetworkRequest::HttpStatusCodeAttribute)
             .toInt();
     if (statusCode == 200) {
-      QMessageBox::information(this, "Success",
-                               "Tag reconfigured successfull.");
+      // QMessageBox::information(this, "Success",
+      //"Tag reconfigured successfull.");
     } else {
       QMessageBox::critical(
           this, "Server Error",
