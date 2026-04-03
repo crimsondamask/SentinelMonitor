@@ -4,6 +4,7 @@
 #include <QtGlobal>
 #include <QtNetwork/QtNetwork>
 #include <cfloat>
+#include <vector>
 
 #include "./ui_mainwindow.h"
 #include "device_link.h"
@@ -526,15 +527,11 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     QLineEdit *formulaEdit = new QLineEdit(this->evalDialog);
     formulaEdit->setText(QString("%1").arg(selectedTag.formula));
 
-    QPushButton *newVarButton = new QPushButton("New Variable");
+    // QPushButton *newVarButton = new QPushButton("New Variable");
 
     grid->addWidget(formulaLabel, 1, 0);
     grid->addWidget(formulaEdit, 1, 1);
-    grid->addWidget(newVarButton, 1, 2);
-
-    connect(newVarButton, &QPushButton::clicked, [=]() {
-
-    });
+    // grid->addWidget(newVarButton, 1, 2);
 
     QComboBox *typeCombo = new QComboBox(this->evalDialog);
     typeCombo->addItem("INT");
