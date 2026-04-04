@@ -94,6 +94,8 @@ public:
   qint16 id;
   QString tk;
   QString name;
+  QString unit;
+  QString description;
   QString tagDetails;
   bool enabled;
   SentinelTagAddress address;

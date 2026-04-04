@@ -23,28 +23,28 @@ int SentinelTableModel::rowCount(const QModelIndex &parent) const {
 }
 
 int SentinelTableModel::columnCount(const QModelIndex &parent) const {
-  return 7;
+  return 8;
 }
 
 void SentinelTableModel::setTableData(SentinelDeviceLink link) {
   this->deviceLinkData = link;
   this->linkType = ST_DEVICE;
   QModelIndex topLeft = createIndex(0, 0);
-  QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
+  QModelIndex bottomRight = createIndex(8, N_CHANNELS - 1);
   emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
 void SentinelTableModel::setTableData(SentinelEvalLink link) {
   this->evalLinkData = link;
   this->linkType = ST_EVALS;
   QModelIndex topLeft = createIndex(0, 0);
-  QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
+  QModelIndex bottomRight = createIndex(8, N_CHANNELS - 1);
   emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
 void SentinelTableModel::setTableData(SentinelInputsLink link) {
   this->inputsLinkData = link;
   this->linkType = ST_INPUTS;
   QModelIndex topLeft = createIndex(0, 0);
-  QModelIndex bottomRight = createIndex(7, N_CHANNELS - 1);
+  QModelIndex bottomRight = createIndex(8, N_CHANNELS - 1);
   emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
 
@@ -69,12 +69,13 @@ QVariant SentinelTableModel::headerData(int section,
     case 3:
       return QString("TYPE");
     case 4:
-      return QString("ADDRESS");
+      return QString("UNIT");
     case 5:
-      return QString("STATUS");
+      return QString("ADDRESS");
     case 6:
-      return QString("");
-
+      return QString("STATUS");
+    case 7:
+      return QString("DESCRIPTION");
     default:
       break;
     }
@@ -108,10 +109,16 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
           return QString("%1").arg(deviceLinkData.tags[i].displayType());
         }
         if (role == Qt::DisplayRole && index.column() == 4) {
-          return QString("%1").arg(deviceLinkData.tags[i].displayAddress());
+          return QString("%1").arg(deviceLinkData.tags[i].unit);
         }
         if (role == Qt::DisplayRole && index.column() == 5) {
+          return QString("%1").arg(deviceLinkData.tags[i].displayAddress());
+        }
+        if (role == Qt::DisplayRole && index.column() == 6) {
           return QString("%1").arg(deviceLinkData.tags[i].displayStatus());
+        }
+        if (role == Qt::DisplayRole && index.column() == 7) {
+          return QString("%1").arg(deviceLinkData.tags[i].description);
         }
       }
     }
@@ -136,10 +143,16 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
           return QString("%1").arg(evalLinkData.tags[i].displayType());
         }
         if (role == Qt::DisplayRole && index.column() == 4) {
-          return QString("%1").arg(evalLinkData.tags[i].displayFormula());
+          return QString("%1").arg(evalLinkData.tags[i].unit);
         }
         if (role == Qt::DisplayRole && index.column() == 5) {
+          return QString("%1").arg(evalLinkData.tags[i].displayFormula());
+        }
+        if (role == Qt::DisplayRole && index.column() == 6) {
           return QString("%1").arg(evalLinkData.tags[i].displayStatus());
+        }
+        if (role == Qt::DisplayRole && index.column() == 7) {
+          return QString("%1").arg(evalLinkData.tags[i].description);
         }
       }
     }
@@ -161,10 +174,13 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
           }
         }
         if (role == Qt::DisplayRole && index.column() == 3) {
-          return QString("");
+          return QString("%1").arg(inputsLinkData.tags[i].displayType());
         }
         if (role == Qt::DisplayRole && index.column() == 4) {
-          return QString("");
+          return QString("%1").arg(inputsLinkData.tags[i].unit);
+        }
+        if (role == Qt::DisplayRole && index.column() == 7) {
+          return QString("%1").arg(inputsLinkData.tags[i].description);
         }
       }
     }
@@ -409,7 +425,7 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
       QString name = {};
       name = QInputDialog::getText(
           this,
-          QString("%1:%2 Enable Tag")
+          QString("%1:%2 Tag Name")
               .arg(selectedTag.displayTk(), selectedTag.displayName()),
           tr("Tag Name"), QLineEdit::Normal, selectedTag.name, &ok);
       if (ok) {
@@ -419,6 +435,35 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
         return;
       }
 
+    } else if (clickedColumn == 4) {
+      QString unit = {};
+      unit = QInputDialog::getText(
+          this,
+          QString("%1:%2 Tag Unit")
+              .arg(selectedTag.displayTk(), selectedTag.displayName()),
+          tr("Tag Unit"), QLineEdit::Normal, selectedTag.unit, &ok);
+      if (ok) {
+        selectedTag.unit = unit;
+        this->postTagConfigRequest(selectedTag.id,
+                                   this->tagReconfigJson(selectedTag));
+        return;
+      }
+
+    } else if (clickedColumn == 7) {
+
+      QString description = {};
+      description = QInputDialog::getText(
+          this,
+          QString("%1:%2 Tag Description")
+              .arg(selectedTag.displayTk(), selectedTag.displayName()),
+          tr("Tag Description"), QLineEdit::Normal, selectedTag.description,
+          &ok);
+      if (ok) {
+        selectedTag.description = description;
+        this->postTagConfigRequest(selectedTag.id,
+                                   this->tagReconfigJson(selectedTag));
+        return;
+      }
     } else if (clickedColumn == 3) {
       int valueType = {};
       valueType = QInputDialog::getInt(
@@ -434,7 +479,7 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
         return;
       }
 
-    } else if (clickedColumn == 4) {
+    } else if (clickedColumn == 5) {
       if (selectedTag.address.type == ST_MODBUS_ADDRESS) {
         int address = {};
         address = QInputDialog::getInt(
@@ -517,12 +562,24 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     QLabel *nameLabel = new QLabel(this->evalDialog);
     nameLabel->setText("Name");
 
+    QLabel *descriptionLabel = new QLabel(this->evalDialog);
+    descriptionLabel->setText("Desc");
+
     QLineEdit *nameEdit = new QLineEdit(this->evalDialog);
     nameEdit->setText(QString("%1").arg(selectedTag.name));
+
+    QLineEdit *unitEdit = new QLineEdit(this->evalDialog);
+    unitEdit->setText(QString("%1").arg(selectedTag.unit));
+
+    QLineEdit *descriptionEdit = new QLineEdit(this->evalDialog);
+    descriptionEdit->setText(QString("%1").arg(selectedTag.description));
 
     QGridLayout *grid = new QGridLayout(this->evalDialog);
     grid->addWidget(nameLabel, 0, 0);
     grid->addWidget(nameEdit, 0, 1);
+    grid->addWidget(unitEdit, 0, 2);
+    grid->addWidget(descriptionLabel, 1, 0);
+    grid->addWidget(descriptionEdit, 1, 1);
 
     QLabel *formulaLabel = new QLabel(this->evalDialog);
     formulaLabel->setText("Formula");
@@ -531,8 +588,8 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
     formulaEdit->setPlainText(QString("%1").arg(selectedTag.formula));
     formulaEdit->setFixedHeight(300);
 
-    grid->addWidget(formulaLabel, 1, 0);
-    grid->addWidget(formulaEdit, 1, 1);
+    grid->addWidget(formulaLabel, 2, 0);
+    grid->addWidget(formulaEdit, 2, 1);
 
     QComboBox *typeCombo = new QComboBox(this->evalDialog);
     typeCombo->addItem("INT");
@@ -542,8 +599,8 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
     typeCombo->setCurrentIndex(selectedTag.value.type);
 
-    grid->addWidget(typeCombo, 2, 0);
-    grid->addWidget(typeCombo, 2, 1);
+    grid->addWidget(typeCombo, 3, 0);
+    grid->addWidget(typeCombo, 3, 1);
 
     QPushButton *applyButton = new QPushButton(this->evalDialog);
     applyButton->setText("Apply");
@@ -583,7 +640,7 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
       combosVec.push_back(linkCombo);
 
       QLabel *label = new QLabel(this->evalDialog);
-      label->setText(QString("Variable %1").arg(i));
+      label->setText(QString("x%1").arg(i));
 
       QLineEdit *tagEdit = new QLineEdit(this->evalDialog);
       tagEdit->setText(QString("%1").arg(selectedTag.vars[i].tagId));
@@ -591,14 +648,16 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
       lineEditVec.push_back(tagEdit);
 
-      grid->addWidget(label, i + 3, 0);
-      grid->addWidget(linkCombo, i + 3, 1);
-      grid->addWidget(tagEdit, i + 3, 2);
+      grid->addWidget(label, i + 4, 0);
+      grid->addWidget(linkCombo, i + 4, 1);
+      grid->addWidget(tagEdit, i + 4, 2);
     }
 
     this->evalDialog->setLayout(grid);
     connect(applyButton, &QPushButton::clicked, [=]() {
       this->selectedEvalBuffer.name = nameEdit->text();
+      this->selectedEvalBuffer.unit = unitEdit->text();
+      this->selectedEvalBuffer.description = descriptionEdit->text();
       this->selectedEvalBuffer.value.type = typeCombo->currentIndex();
       this->selectedEvalBuffer.formula = formulaEdit->toPlainText();
 
@@ -658,6 +717,8 @@ QByteArray MainWindow::evalReconfigJson(SentinelEvalTag eval) {
   evalObject["name"] = eval.name;
   evalObject["enabled"] = eval.enabled;
   evalObject["formula"] = eval.formula;
+  evalObject["unit"] = eval.unit;
+  evalObject["description"] = eval.description;
   evalObject["value"] = tagValue;
   evalObject["status"] = QString("Normal");
 
@@ -920,6 +981,28 @@ void MainWindow::parseServerData() {
 
         QString tagName = tagObject.value("name").toString();
         deviceLink.tags[tag_index].name = tagName;
+
+        if (!tagObject.value("unit").isString()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 unit parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QString tagUnit = tagObject.value("unit").toString();
+        deviceLink.tags[tag_index].unit = tagUnit;
+
+        if (!tagObject.value("description").isString()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 description parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QString tagDescription = tagObject.value("description").toString();
+        deviceLink.tags[tag_index].description = tagDescription;
 
         if (!tagObject.value("enabled").isBool()) {
           this->error = true;
@@ -1233,6 +1316,28 @@ void MainWindow::parseServerData() {
         QString tagName = tagObject.value("name").toString();
         inputLink.tags[tag_index].name = tagName;
 
+        if (!tagObject.value("unit").isString()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 unit parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QString tagUnit = tagObject.value("unit").toString();
+        inputLink.tags[tag_index].unit = tagUnit;
+
+        if (!tagObject.value("description").isString()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 description parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QString tagDescription = tagObject.value("description").toString();
+        inputLink.tags[tag_index].description = tagDescription;
+
         if (!tagObject.value("enabled").isBool()) {
           this->error = true;
           this->serverError =
@@ -1358,6 +1463,28 @@ void MainWindow::parseServerData() {
 
         QString tagName = tagObject.value("name").toString();
         evalLink.tags[tag_index].name = tagName;
+
+        if (!tagObject.value("unit").isString()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 unit parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QString tagUnit = tagObject.value("unit").toString();
+        evalLink.tags[tag_index].unit = tagUnit;
+
+        if (!tagObject.value("description").isString()) {
+          this->error = true;
+          this->serverError =
+              QString("tag %1 description parse failed.").arg(tag_index);
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        QString tagDescription = tagObject.value("description").toString();
+        evalLink.tags[tag_index].description = tagDescription;
 
         if (!tagObject.value("vars").isArray()) {
           this->error = true;
@@ -1616,6 +1743,8 @@ QByteArray MainWindow::tagReconfigJson(SentinelDeviceTag tag) {
   tagObject["id"] = tag.id;
   tagObject["tk"] = tag.tk;
   tagObject["name"] = tag.name;
+  tagObject["unit"] = tag.unit;
+  tagObject["description"] = tag.description;
   tagObject["enabled"] = tag.enabled;
   tagObject["address"] = tagAddress;
   tagObject["value"] = tagValue;

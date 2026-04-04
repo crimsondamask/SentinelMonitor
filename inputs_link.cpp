@@ -17,6 +17,22 @@ QString SentinelInputsTag::displayTk() const {
   return QString("%1").arg(this->tk);
 }
 
+QString SentinelInputsTag::displayType() const {
+  switch (this->value.type) {
+  case ST_INT_VALUE:
+    return QString("INT");
+    break;
+  case ST_REAL_VALUE:
+    return QString("REAL");
+    break;
+  case ST_BIT_VALUE:
+    return QString("BIT");
+    break;
+  default:
+    return QString("N/A");
+  }
+}
+
 bool SentinelInputsTag::isEnabled() const { return this->enabled; }
 
 QString SentinelInputsTag::displayValue() const {

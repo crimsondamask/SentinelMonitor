@@ -9,11 +9,14 @@ public:
   QString displayValue() const;
   QString displayName() const;
   QString displayTk() const;
+  QString displayType() const;
   bool isEnabled() const;
 
   qint16 id;
   QString tk;
   QString name;
+  QString unit;
+  QString description;
   bool enabled;
   SentinelTagValue value;
 };

@@ -26,6 +26,8 @@ public:
   qint16 id;
   QString tk;
   QString name;
+  QString unit;
+  QString description;
   std::vector<EvalVar> vars;
   QString formula;
   bool enabled;
