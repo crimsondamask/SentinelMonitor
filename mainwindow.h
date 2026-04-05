@@ -83,6 +83,8 @@ public:
   void postEvalConfigRequest(int linkId, QByteArray data);
   void writeTagFinished();
   void reconfigTagFinished();
+  void linkEditClicked();
+  void linkEditFinished();
   void reconfigLinksFinished();
   void saveActionClicked();
   void sendConfigActionClicked();
@@ -102,6 +104,7 @@ private:
   Ui::MainWindow *ui;
   QLabel *statusLabel;
   QLineEdit *linkDetails;
+  QPushButton *linkDetailsButton;
   QLineEdit *linkStatus;
   QPushButton *downloadButton;
   QComboBox *linksList;

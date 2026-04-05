@@ -195,9 +195,10 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
       statusLabel(new QLabel("Disconnected.")), downloadButton(new QPushButton),
       pollTimer(new QTimer(this)), centralWidget(new QWidget(this)),
-      linkDetails(new QLineEdit("N/A")), linkStatus(new QLineEdit("N/A")),
-      tableView(new QTableView), selectedLinkIndex(0),
-      selectedEvalBuffer(SentinelEvalTag(0, "Hello")) {
+      linkDetails(new QLineEdit("N/A")),
+      linkDetailsButton(new QPushButton("Edit", this)),
+      linkStatus(new QLineEdit("N/A")), tableView(new QTableView),
+      selectedLinkIndex(0), selectedEvalBuffer(SentinelEvalTag(0, "Hello")) {
   ui->setupUi(this);
 
   QLocale::setDefault(QLocale::c());
@@ -231,13 +232,14 @@ MainWindow::MainWindow(QWidget *parent)
 
   linkDetails->setReadOnly(true);
   linkDetails->setFixedWidth(300);
+
   url = QUrl::fromUserInput(QString(POLL_URL).trimmed());
 
   setWindowTitle("Sentinel Monitor V1.0");
 
   connect(pollTimer, &QTimer::timeout, this, &MainWindow::initRequest);
 
-  pollTimer->start(500);
+  pollTimer->start(1000);
   // Repeating timer
   pollTimer->setSingleShot(false);
   linksList = new QComboBox();
@@ -254,10 +256,20 @@ MainWindow::MainWindow(QWidget *parent)
   QFormLayout *formLayout = new QFormLayout;
   formLayout->setFormAlignment(Qt::AlignLeft);
   formLayout->setLabelAlignment(Qt::AlignLeft);
-  formLayout->addWidget(linksList);
+  formLayout->addRow(QString("Link:"), linksList);
 
+  QGridLayout *linkDetailsGrid = new QGridLayout();
+  linkDetailsGrid->addWidget(linkDetails, 0, 0);
+  linkDetailsGrid->addWidget(linkDetailsButton, 0, 1);
+
+  connect(this->linkDetailsButton, &QPushButton::clicked, this,
+          &MainWindow::linkEditClicked);
+
+  formLayout->addRow(QString("Protocol Details:"), linkDetailsGrid);
   formLayout->addRow(QString("Status:"), statusLabel);
-  formLayout->addRow(QString("Link Details:"), linkDetails);
+  // formLayout->addRow(QString("Link Details:"), linkDetails);
+  // formLayout->addRow(QString(""), linkDetailsButton);
+
   formLayout->addRow(QString("Link Status:"), linkStatus);
 
   tableView->setModel(&model);
@@ -316,7 +328,49 @@ void MainWindow::postWriteRequest(int linkId, int tagId,
   connect(this->writeTagReply.get(), &QNetworkReply::finished, this,
           &MainWindow::writeTagFinished);
 }
+void MainWindow::linkEditFinished() {
+  if (this->reconfigLinksReply->error() ==
+      QNetworkReply::NetworkError::NoError) {
+    int statusCode =
+        reconfigLinksReply->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+            .toInt();
+    if (statusCode == 200) {
+      QMessageBox::information(this, "Success",
+                               "Configuration sent successfully.");
+    } else {
+      QMessageBox::critical(this, "Server Error",
+                            "Could not send the configuration to the server.");
+    }
+  } else {
+    QString errorMsg = QString("Could not reconfigure the server. %1")
+                           .arg(reconfigLinksReply->errorString());
+    QMessageBox::critical(this, "Reconfigure Error", errorMsg);
+  }
+}
+void MainWindow::linkEditClicked() {
+  if (this->linksBuffer[this->selectedLinkIndex].type != ST_DEVICE) {
+    return;
+  }
+  bool ok{};
+  QString stringInput = QInputDialog::getText(
+      this, QString("Link Protocol Details"), QString("Details"),
+      QLineEdit::Normal, this->linkDetails->text(), &ok);
 
+  if (ok) {
+    QJsonDocument doc{};
+    QJsonObject jsonObject{};
+    jsonObject["link_id"] = this->selectedLinkIndex;
+    jsonObject["protocol"] = stringInput;
+    doc.setObject(jsonObject);
+    QUrl configUrl = QUrl(QString(RECONFIG_DEVICE_PROTOCOL));
+    QNetworkRequest postRequest = QNetworkRequest(configUrl);
+    postRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                          QString("application/json"));
+    reconfigLinksReply.reset(qnam.post(postRequest, doc.toJson()));
+    connect(this->reconfigLinksReply.get(), &QNetworkReply::finished, this,
+            &MainWindow::linkEditFinished);
+  }
+}
 void MainWindow::writeTagFinished() {
   if (this->writeTagReply->error() == QNetworkReply::NetworkError::NoError) {
     int statusCode =
@@ -1669,17 +1723,35 @@ void MainWindow::updateView() {
   SentinelDeviceLink selectedDeviceLink = selectedLink.deviceLink;
   SentinelInputsLink selectedInputsLink = selectedLink.inputsLink;
   SentinelEvalLink selectedEvalLink = selectedLink.evalLink;
+  this->tableView->setDisabled(false);
+  this->linksList->setDisabled(false);
+
+  if (selectedLink.type == ST_DEVICE) {
+    this->linkDetailsButton->setVisible(true);
+  } else {
+    this->linkDetailsButton->setVisible(false);
+  }
+
   switch (selectedLink.type) {
   case ST_DEVICE:
-    this->linkDetails->setText(QString("%1:%2:%3")
-                                   .arg(selectedDeviceLink.tk,
-                                        selectedDeviceLink.name,
-                                        selectedDeviceLink.protocolDetails));
+    if (selectedLink.type == ST_MODBUS_TCP) {
+      this->linkDetails->setText(
+          QString("modbus:tcp:%1:%2")
+              .arg(selectedDeviceLink.config.modbusTcp.ip)
+              .arg(selectedDeviceLink.config.modbusTcp.port));
+    } else if (selectedLink.type == ST_MODBUS_SERIAL) {
+      this->linkDetails->setText(
+          QString("modbus:rtu:%1:%2:%3")
+              .arg(selectedDeviceLink.config.modbusSerial.comPort)
+              .arg(selectedDeviceLink.config.modbusSerial.baudrate)
+              .arg(selectedDeviceLink.config.modbusSerial.slave));
+    } else {
+      this->linkDetails->setText("Unimplemented link");
+    }
+
     this->linkStatus->setDisabled(false);
     this->linkStatus->setText(selectedDeviceLink.status);
     this->model.setTableData(selectedDeviceLink);
-    this->tableView->setDisabled(false);
-    this->linksList->setDisabled(false);
     break;
   case ST_INPUTS:
     this->linkDetails->setText(
@@ -1687,8 +1759,6 @@ void MainWindow::updateView() {
     this->linkStatus->setDisabled(true);
     this->linkStatus->setText("INPUTS");
     this->model.setTableData(selectedInputsLink);
-    this->tableView->setDisabled(false);
-    this->linksList->setDisabled(false);
     break;
   case ST_EVALS:
     this->linkDetails->setText(
@@ -1696,12 +1766,8 @@ void MainWindow::updateView() {
     this->linkStatus->setDisabled(true);
     this->linkStatus->setText("EVALS");
     this->model.setTableData(selectedEvalLink);
-    this->tableView->setDisabled(false);
-    this->linksList->setDisabled(false);
     break;
   default:
-    this->tableView->setDisabled(true);
-    this->linksList->setDisabled(true);
     break;
   }
 }
