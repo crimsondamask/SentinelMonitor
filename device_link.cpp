@@ -83,7 +83,7 @@ SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk,
 }
 
 SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk)
-    : config(SentinelModbusTcp("192.168.0.1", 502)) {
+    : config(SentinelModbusTcp("192.168.0.1", 502, 1)) {
   this->id = id;
   this->tk = tk;
   this->name = QString("%1%2").arg(tk).arg(id);
@@ -111,10 +111,10 @@ void SentinelDeviceLink::setConfig(SentinelModbusSerial config) {
 SentinelConfig::SentinelConfig(SentinelModbusTcp config)
     : modbusTcp(config), modbusSerial("COM1", 9600, 1) {}
 SentinelConfig::SentinelConfig(SentinelModbusSerial config)
-    : modbusTcp("192.168.0.1", 502), modbusSerial(config) {}
+    : modbusTcp("192.168.0.1", 502, 1), modbusSerial(config) {}
 
-SentinelModbusTcp::SentinelModbusTcp(QString ip, int port)
-    : ip(ip), port(port) {}
+SentinelModbusTcp::SentinelModbusTcp(QString ip, int port, int slave)
+    : ip(ip), port(port), slave(slave) {}
 
 SentinelModbusSerial::SentinelModbusSerial(QString comPort, int baudrate,
                                            int slave, int parity)

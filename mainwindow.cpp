@@ -239,7 +239,7 @@ MainWindow::MainWindow(QWidget *parent)
 
   url = QUrl::fromUserInput(QString(POLL_URL).trimmed());
 
-  setWindowTitle("Sentinel Monitor V1.0");
+  setWindowTitle("Sentinel Monitor V1.0.0");
 
   connect(pollTimer, &QTimer::timeout, this, &MainWindow::initRequest);
 
@@ -820,8 +820,8 @@ void MainWindow::postEvalConfigRequest(int linkId, QByteArray data) {
 }
 
 void MainWindow::aboutActionClicked() {
-  QMessageBox::information(nullptr, "About",
-                           "Sentinel Monitor V1.0. 2026 by Abdelkader Madoui.");
+  QMessageBox::information(
+      nullptr, "About", "Sentinel Monitor V1.0.0. 2026 by Abdelkader Madoui.");
 }
 
 void MainWindow::sendConfigActionClicked() {
@@ -1249,18 +1249,28 @@ void MainWindow::parseServerData() {
         }
 
         int portValue = modbusTcpObject.value("port").toInt();
+        if (!modbusTcpObject.value("slave").isDouble()) {
+          this->error = true;
+          this->serverError = QString("Could not parse ModbusTcp slave value.");
+          this->statusLabel->setText(this->serverError);
+          return;
+        }
+
+        int slaveValue = modbusTcpObject.value("slave").toInt();
+
         deviceLink.protocolDetails =
             QString("ModbusTcp:%1:%2").arg(ipValue).arg(portValue);
 
         SentinelModbusTcp modbusTcpConfig =
-            SentinelModbusTcp(ipValue, portValue);
+            SentinelModbusTcp(ipValue, portValue, slaveValue);
 
         deviceLink.setConfig(modbusTcpConfig);
+
       } else if (protocolObject.value("ModbusSerial").isObject()) {
         QJsonObject modbusSerialObject =
             protocolObject.value("ModbusSerial").toObject();
 
-        if (!modbusSerialObject.value("ip").isString()) {
+        if (!modbusSerialObject.value("com_port").isString()) {
           this->error = true;
           this->serverError =
               QString("Could not parse ModbusSerial com port value.");
@@ -1752,9 +1762,10 @@ void MainWindow::updateView() {
   case ST_DEVICE:
     if (selectedLink.type == ST_MODBUS_TCP) {
       this->linkDetails->setText(
-          QString("modbus:tcp:%1:%2")
+          QString("modbus:tcp:%1:%2:%3")
               .arg(selectedDeviceLink.config.modbusTcp.ip)
-              .arg(selectedDeviceLink.config.modbusTcp.port));
+              .arg(selectedDeviceLink.config.modbusTcp.port)
+              .arg(selectedDeviceLink.config.modbusTcp.slave));
     } else if (selectedLink.type == ST_MODBUS_SERIAL) {
       this->linkDetails->setText(
           QString("modbus:rtu:%1:%2:%3")

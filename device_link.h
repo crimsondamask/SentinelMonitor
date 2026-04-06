@@ -60,10 +60,11 @@ public:
 };
 class SentinelModbusTcp {
 public:
-  SentinelModbusTcp(QString ip, int port);
+  SentinelModbusTcp(QString ip, int port, int slave);
 
   QString ip;
   int port;
+  int slave;
 };
 
 class SentinelConfig {
