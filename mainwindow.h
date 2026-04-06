@@ -103,6 +103,7 @@ public:
 private:
   Ui::MainWindow *ui;
   QLabel *statusLabel;
+  QLabel *statusBarLabel;
   QLineEdit *linkDetails;
   QPushButton *linkDetailsButton;
   QLineEdit *linkStatus;

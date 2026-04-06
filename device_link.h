@@ -122,6 +122,7 @@ public:
   std::vector<SentinelDeviceTag> tags;
   size_t tag_count;
   QString last_poll_time;
+  qint128 scanTime;
   QString status;
 
 private:

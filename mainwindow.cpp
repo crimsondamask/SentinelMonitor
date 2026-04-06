@@ -197,9 +197,9 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
-      statusLabel(new QLabel("Disconnected.")), downloadButton(new QPushButton),
-      pollTimer(new QTimer(this)), centralWidget(new QWidget(this)),
-      linkDetails(new QLineEdit("N/A")),
+      statusLabel(new QLabel("Disconnected.")), statusBarLabel(new QLabel("")),
+      downloadButton(new QPushButton), pollTimer(new QTimer(this)),
+      centralWidget(new QWidget(this)), linkDetails(new QLineEdit("N/A")),
       linkDetailsButton(new QPushButton("Edit", this)),
       linkStatus(new QLineEdit("N/A")), tableView(new QTableView),
       selectedLinkIndex(0), selectedEvalBuffer(SentinelEvalTag(0, "Hello")) {
@@ -1205,6 +1205,16 @@ void MainWindow::parseServerData() {
         return;
       }
 
+      if (!deviceLinkObject.value("scan_time").isDouble()) {
+        this->error = true;
+        this->serverError = QString("Could not parse scan time value.");
+        this->statusLabel->setText(this->serverError);
+        return;
+      }
+
+      qint128 scanTimeValue = deviceLinkObject.value("scan_time").toInt();
+      deviceLink.scanTime = scanTimeValue;
+
       if (!deviceLinkObject.value("last_poll_time").isString()) {
         this->error = true;
         this->serverError = QString("Could not parse last poll time value.");
@@ -1750,6 +1760,13 @@ void MainWindow::updateView() {
     this->linkDetailsButton->setVisible(false);
   }
 
+  if (selectedLink.type == ST_DEVICE) {
+
+    this->statusBar()->showMessage(
+        QString("%1 ms").arg(selectedDeviceLink.scanTime));
+  } else {
+    this->statusBar()->clearMessage();
+  }
   switch (selectedLink.type) {
   case ST_DEVICE:
     if (selectedDeviceLink.config.protocol == ST_MODBUS_TCP) {
@@ -1770,6 +1787,7 @@ void MainWindow::updateView() {
 
     this->linkStatus->setDisabled(false);
     this->linkStatus->setText(selectedDeviceLink.status);
+
     this->model.setTableData(selectedDeviceLink);
     break;
   case ST_INPUTS:
