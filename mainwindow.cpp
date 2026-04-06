@@ -33,6 +33,7 @@ void SentinelTableModel::setTableData(SentinelDeviceLink link) {
   QModelIndex bottomRight = createIndex(8, N_CHANNELS - 1);
   emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
+
 void SentinelTableModel::setTableData(SentinelEvalLink link) {
   this->evalLinkData = link;
   this->linkType = ST_EVALS;
@@ -40,6 +41,7 @@ void SentinelTableModel::setTableData(SentinelEvalLink link) {
   QModelIndex bottomRight = createIndex(8, N_CHANNELS - 1);
   emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
 }
+
 void SentinelTableModel::setTableData(SentinelInputsLink link) {
   this->inputsLinkData = link;
   this->linkType = ST_INPUTS;
@@ -51,6 +53,7 @@ void SentinelTableModel::setTableData(SentinelInputsLink link) {
 Qt::ItemFlags SentinelTableModel::flags(const QModelIndex &index) const {
   return QAbstractTableModel::flags(index) & ~Qt::ItemIsUserCheckable;
 }
+
 QVariant SentinelTableModel::headerData(int section,
                                         Qt::Orientation orientation,
                                         int role) const {
@@ -191,6 +194,7 @@ QVariant SentinelTableModel::data(const QModelIndex &index, int role) const {
 
   return QVariant();
 }
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
       statusLabel(new QLabel("Disconnected.")), downloadButton(new QPushButton),
@@ -288,8 +292,11 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
+
 bool MainWindow::isError() { return this->error; }
+
 QString MainWindow::errorString() { return this->serverError; }
+
 void MainWindow::postWriteRequest(int linkId, int tagId,
                                   SentinelTagValue value) {
   QJsonObject tagWriteData{};
@@ -328,6 +335,7 @@ void MainWindow::postWriteRequest(int linkId, int tagId,
   connect(this->writeTagReply.get(), &QNetworkReply::finished, this,
           &MainWindow::writeTagFinished);
 }
+
 void MainWindow::linkEditFinished() {
   if (this->reconfigLinksReply->error() ==
       QNetworkReply::NetworkError::NoError) {
@@ -347,6 +355,7 @@ void MainWindow::linkEditFinished() {
     QMessageBox::critical(this, "Reconfigure Error", errorMsg);
   }
 }
+
 void MainWindow::linkEditClicked() {
   if (this->linksBuffer[this->selectedLinkIndex].type != ST_DEVICE) {
     return;
@@ -371,6 +380,7 @@ void MainWindow::linkEditClicked() {
             &MainWindow::linkEditFinished);
   }
 }
+
 void MainWindow::writeTagFinished() {
   if (this->writeTagReply->error() == QNetworkReply::NetworkError::NoError) {
     int statusCode =
@@ -742,6 +752,7 @@ void MainWindow::tagRowClicked(const QModelIndex &index) {
 
   this->postWriteRequest(this->selectedLinkIndex, clickedRow, tagValue);
 }
+
 QByteArray MainWindow::evalReconfigJson(SentinelEvalTag eval) {
   QJsonDocument doc{};
   QJsonObject evalObject{};
@@ -812,6 +823,7 @@ void MainWindow::aboutActionClicked() {
   QMessageBox::information(nullptr, "About",
                            "Sentinel Monitor V1.0. 2026 by Abdelkader Madoui.");
 }
+
 void MainWindow::sendConfigActionClicked() {
   if (this->isError()) {
     QMessageBox::information(
@@ -838,6 +850,7 @@ void MainWindow::sendConfigActionClicked() {
             &MainWindow::reconfigLinksFinished);
   }
 }
+
 void MainWindow::reconfigLinksFinished() {
 
   if (this->reconfigLinksReply->error() ==
@@ -858,6 +871,7 @@ void MainWindow::reconfigLinksFinished() {
     QMessageBox::critical(this, "Reconfigure Error", errorMsg);
   }
 }
+
 void MainWindow::saveActionClicked() {
   if (this->isError()) {
     QMessageBox::information(
@@ -902,6 +916,7 @@ void MainWindow::selectedLinkChanged() {
     this->updateView();
   }
 }
+
 void MainWindow::initRequest() {
   reply.reset(qnam.get(QNetworkRequest(url)));
   connect(reply.get(), &QNetworkReply::finished, this,
@@ -910,6 +925,7 @@ void MainWindow::initRequest() {
 
 // Parses the JSON data received from the server.
 // This is a large function.
+
 void MainWindow::parseServerData() {
   if (reply->error() != QNetworkReply::NoError) {
     this->error = true;
