@@ -71,7 +71,7 @@ SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk,
   this->tk = tk;
   this->name = QString("%1%2").arg(tk).arg(id);
   this->enable = true;
-  this->protocol = ST_MODBUS_TCP;
+  // this->protocol = config.protocol;
   this->tags.reserve(N_CHANNELS);
   for (size_t i = 0; i < N_CHANNELS; i++) {
     SentinelDeviceTag tag = SentinelDeviceTag(i, tk);
@@ -88,7 +88,8 @@ SentinelDeviceLink::SentinelDeviceLink(qint16 id, QString tk)
   this->tk = tk;
   this->name = QString("%1%2").arg(tk).arg(id);
   this->enable = true;
-  this->protocol = ST_MODBUS_TCP;
+  this->config.protocol = ST_MODBUS_TCP;
+  // this->protocol = ST_MODBUS_TCP;
   this->tags.reserve(N_CHANNELS);
   for (size_t i = 0; i < N_CHANNELS; i++) {
     SentinelDeviceTag tag = SentinelDeviceTag(i, tk);
@@ -121,4 +122,4 @@ SentinelModbusSerial::SentinelModbusSerial(QString comPort, int baudrate,
     : comPort(comPort), baudrate(baudrate), slave(slave), parity(parity) {}
 SentinelModbusSerial::SentinelModbusSerial(QString comPort, int baudrate,
                                            int slave)
-    : comPort(comPort), baudrate(baudrate) {}
+    : comPort(comPort), baudrate(baudrate), slave(slave) {}

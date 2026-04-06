@@ -1230,7 +1230,7 @@ void MainWindow::parseServerData() {
         QJsonObject modbusTcpObject =
             protocolObject.value("ModbusTcp").toObject();
 
-        deviceLink.protocol = ST_MODBUS_TCP;
+        deviceLink.config.protocol = ST_MODBUS_TCP;
 
         if (!modbusTcpObject.value("ip").isString()) {
           this->error = true;
@@ -1258,8 +1258,6 @@ void MainWindow::parseServerData() {
 
         int slaveValue = modbusTcpObject.value("slave").toInt();
 
-        deviceLink.protocolDetails =
-            QString("ModbusTcp:%1:%2").arg(ipValue).arg(portValue);
 
         SentinelModbusTcp modbusTcpConfig =
             SentinelModbusTcp(ipValue, portValue, slaveValue);
@@ -1301,12 +1299,6 @@ void MainWindow::parseServerData() {
         int slaveValue = modbusSerialObject.value("slave").toInt();
         SentinelModbusSerial modbusSerialConfig =
             SentinelModbusSerial(comPortValue, baudrateValue, slaveValue);
-
-        deviceLink.protocolDetails =
-            QString("ModbusSerial:%1:Baudrate(%2):Slave(%3)")
-                .arg(comPortValue)
-                .arg(baudrateValue)
-                .arg(slaveValue);
 
         deviceLink.setConfig(modbusSerialConfig);
 
@@ -1760,13 +1752,13 @@ void MainWindow::updateView() {
 
   switch (selectedLink.type) {
   case ST_DEVICE:
-    if (selectedLink.type == ST_MODBUS_TCP) {
+    if (selectedDeviceLink.config.protocol == ST_MODBUS_TCP) {
       this->linkDetails->setText(
           QString("modbus:tcp:%1:%2:%3")
               .arg(selectedDeviceLink.config.modbusTcp.ip)
               .arg(selectedDeviceLink.config.modbusTcp.port)
               .arg(selectedDeviceLink.config.modbusTcp.slave));
-    } else if (selectedLink.type == ST_MODBUS_SERIAL) {
+    } else if (selectedDeviceLink.config.protocol == ST_MODBUS_SERIAL) {
       this->linkDetails->setText(
           QString("modbus:rtu:%1:%2:%3")
               .arg(selectedDeviceLink.config.modbusSerial.comPort)

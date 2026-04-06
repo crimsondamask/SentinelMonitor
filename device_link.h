@@ -116,9 +116,9 @@ public:
   QString tk;
   QString name;
   bool enable;
-  int protocol;
+  // int protocol;
   SentinelConfig config;
-  QString protocolDetails;
+  // QString protocolDetails;
   std::vector<SentinelDeviceTag> tags;
   size_t tag_count;
   QString last_poll_time;
